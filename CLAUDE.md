@@ -49,3 +49,8 @@ git -C .claude-memory push
 - UI 文字列は **ASCII のみ**（標準フォントに日本語グリフが無く Web で豆腐になる）
 - 書き出しは標準版 Godot（mono 版は Web 不可）。ローカル確認は `tools/build_web.ps1` → `python tools/serve_web.py`
 - クラウド環境には Godot 本体が無い。コード目視チェックまでで良い（PR に明記する）。ローカルでの動作確認は PC 側のくろすけが `--headless --import` / `--quit-after N` で行う
+
+## このゲーム（ららくろそふとQA）
+
+- 企画書は `docs/design.md`（決定事項と改訂履歴もここ）。くろすけの企画メモは `bug-hunt-game-plan.md`（claude-memory）
+- GitHubトークンに `workflow` 権限が無いので、`.github/workflows/` を変える時は git push ではなく GitHub MCP（create_or_update_file）で更新する（2026-10-26、リポジトリ作成時に push が拒否された）
