@@ -1,4 +1,15 @@
-# godot-web-game-template
+# ららくろそふとQA
+
+モバイルゲームの運営QAになって、いろんなタイトルのイベントを日替わりでテストするバグ探しゲーム（Godot 4.7、Web）。
+
+- 遊ぶ: https://lalalalasuke-jpg.github.io/rarakuro-qa/
+- 企画書: [docs/design.md](docs/design.md)
+
+---
+
+以下はテンプレ（godot-web-game-template）由来の説明。
+
+## godot-web-game-template
 
 Godot 4.7 の 2D ゲームを **GitHub Pages に自動デプロイ**するスターターテンプレ。
 `main` に push すると GitHub Actions が Web 書き出しして本番反映する ＝ **PC 不要でスマホからでも更新できる**。
