@@ -34,6 +34,9 @@ func _run() -> void:
 				main.game._drop()
 				await create_timer(main.game.COOLDOWN + 0.1).timeout
 			await create_timer(1.0).timeout
+		"giveup":  # 全部「異常なし」で残業まで行き、今日はあがる（見逃し3つ）
+			for i in 4:
+				main._on_no_bug_pressed()
 		"gameover":
 			main.game.score = 820
 			main.game._do_game_over()

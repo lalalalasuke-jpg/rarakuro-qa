@@ -119,13 +119,46 @@ func show_result(day_no: int, reports: Array, bugs: Array, fixed: Array, verifie
 				marks.append("%s%s" % [CHECK_LABELS[key], "○" if judge.checks[key] else "×"])
 			marks.append("重要度%s" % SEVERITY_TEXT[judge.severity])
 			_label("　" + "　".join(marks), 18, INK)
+		# 直ったバグには開発さんの原因メモ（バグの裏側。詳しくは docs/bug-internals.md）
+		if ok:
+			_cause_memo(_find_bug(bugs, judge.bug_id))
 
 	var missed := bugs.filter(func(b): return not fixed.has(b.id))
 	if not missed.is_empty():
 		_heading("見逃したバグ")
 		for b in missed:
 			_label("・%s（%s）" % [b.title, b.trigger], 20, BAD)
+			_cause_memo(b)
 	visible = true
+
+
+func _find_bug(bugs: Array, id: String) -> Dictionary:
+	for b in bugs:
+		if b.id == id:
+			return b
+	return {}
+
+
+# 「原因メモ」を少し目立つ枠で出す
+func _cause_memo(bug: Dictionary) -> void:
+	if not bug.has("cause"):
+		return
+	var box := PanelContainer.new()
+	var st := StyleBoxFlat.new()
+	st.bg_color = Color(0.9, 0.94, 0.98)
+	st.set_corner_radius_all(6)
+	st.content_margin_left = 12
+	st.content_margin_right = 12
+	st.content_margin_top = 6
+	st.content_margin_bottom = 6
+	box.add_theme_stylebox_override("panel", st)
+	var l := Label.new()
+	l.text = "開発さんの原因メモ：%s" % bug.cause
+	l.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	l.add_theme_font_size_override("font_size", 18)
+	l.add_theme_color_override("font_color", Color(0.18, 0.3, 0.45))
+	box.add_child(l)
+	body.add_child(box)
 
 
 # 1日のスコア：報告ごとの点数の合計＋残業の減点（0点より下にはしない）

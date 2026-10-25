@@ -25,6 +25,8 @@ func _run() -> void:
 	var form: Dictionary = load_json("res://data/report_mm_halloween.json")
 	var all_ids := bugs.map(func(b): return b.id)
 
+	check(bugs.all(func(b): return b.get("cause", "") != ""), "全部のバグに開発さんの原因メモがある")
+
 	# --- 選択肢：そのタイトルの全バグ候補の正解＋ダミー（タイトルごと） ---
 	for form_path in ["res://data/report_mm_halloween.json", "res://data/report_sk_autumn.json"]:
 		var fm: Dictionary = load_json(form_path)
