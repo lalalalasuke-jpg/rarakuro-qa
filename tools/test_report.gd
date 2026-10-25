@@ -28,7 +28,7 @@ func _run() -> void:
 	check(bugs.all(func(b): return b.get("cause", "") != ""), "全部のバグに開発さんの原因メモがある")
 
 	# --- 選択肢：そのタイトルの全バグ候補の正解＋ダミー（タイトルごと） ---
-	for form_path in ["res://data/report_mm_halloween.json", "res://data/report_sk_autumn.json"]:
+	for form_path in ["res://data/report_mm_halloween.json", "res://data/report_sk_autumn.json", "res://data/report_mm_autumn.json"]:
 		var fm: Dictionary = load_json(form_path)
 		var title_bugs := bugs.filter(func(b): return b.title_ver == fm.title_ver)
 		check(title_bugs.size() >= 7, "%s: バグ候補 %d 個" % [fm.title_ver, title_bugs.size()])

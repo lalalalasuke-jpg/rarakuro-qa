@@ -18,6 +18,8 @@ const NORMAL_SYMBOLS := [
 
 # ハロウィンの絵柄（symbol_index の順）
 const HALLOWEEN_SYMBOLS := ["pumpkin", "ghost", "bat", "moon", "hat", "candy", "skull", "cat"]
+# 紅葉狩り（v1.4）の絵柄（symbol_index の順）
+const AUTUMN_SYMBOLS := ["momiji", "ichou", "donguri", "kinoko", "kuri", "imo", "dango", "susuki"]
 
 const FACE_BG := Color(0.16, 0.13, 0.2)
 const ORANGE := Color("f28c28")
@@ -30,13 +32,20 @@ var face_up := false
 var matched := false
 # false のカードは通常の絵柄で描く（バグ MM-HW-001 用）
 var halloween := true
+## 絵柄のセット: "halloween"（v1.3）／"autumn"（v1.4 紅葉狩り）。
+## autumn のときも、style を "halloween" にしたカードはハロウィンの絵で描かれる（バグ MM-AU-08 用）
+var style := "halloween"
+## 裏面のデザイン（表の絵柄とは別。MM-AU-08 で表だけ差し替え漏れになっても、裏はその版のまま）
+var back_style := "halloween"
 
 
 # 仕様メモの絵柄一覧用：表向きで押せないカードを1枚作る
-static func make_icon(index: int, icon_size: float) -> Control:
+static func make_icon(index: int, icon_size: float, icon_style := "halloween") -> Control:
 	var card: MemoryCard = load("res://scenes/titles/memory_match/card.tscn").instantiate()
 	card.custom_minimum_size = Vector2(icon_size, icon_size)
 	card.symbol_index = index
+	card.style = icon_style
+	card.back_style = icon_style
 	card.face_up = true
 	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	return card
@@ -69,7 +78,8 @@ func _draw() -> void:
 # 裏向き：ハロウィンらしい紫の裏面にかぼちゃ色のひし形
 func _draw_back() -> void:
 	var rect := Rect2(Vector2.ZERO, size)
-	draw_rect(rect, Color(0.28, 0.16, 0.38), true)
+	# 紅葉狩りの版は、えんじ色の裏面
+	draw_rect(rect, Color(0.45, 0.16, 0.12) if back_style == "autumn" else Color(0.28, 0.16, 0.38), true)
 	draw_rect(rect, ORANGE, false, 4.0)
 	var c := size * 0.5
 	var half := Vector2(size.x * 0.22, size.y * 0.22)
@@ -85,11 +95,72 @@ func _draw_face() -> void:
 	# 以降は中心を原点、半径 r を基準にして描く
 	var r := minf(size.x, size.y) * 0.5 - 10.0
 	draw_set_transform(size * 0.5, 0.0, Vector2.ONE)
-	if halloween:
+	if style == "autumn":
+		_draw_autumn(AUTUMN_SYMBOLS[symbol_index], r)
+	elif halloween:
 		_draw_halloween(HALLOWEEN_SYMBOLS[symbol_index], r)
 	else:
 		_draw_normal(r)
 	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+
+
+# 秋（紅葉狩り）の絵柄
+func _draw_autumn(kind: String, r: float) -> void:
+	match kind:
+		"momiji":  # もみじ：赤い5つのとがった葉
+			var red := Color("d63c2f")
+			for i in 5:
+				var ang := -PI / 2 + (i - 2) * 0.62
+				var tip := Vector2(cos(ang), sin(ang)) * r * 0.8
+				var side := Vector2(cos(ang + PI / 2), sin(ang + PI / 2)) * r * 0.16
+				draw_colored_polygon(PackedVector2Array([Vector2(0, r * 0.1) + side, tip, Vector2(0, r * 0.1) - side]), red)
+			draw_circle(Vector2(0, r * 0.05), r * 0.22, red)
+			draw_line(Vector2(0, r * 0.2), Vector2(0, r * 0.75), Color("8a2a20"), 4.0)
+		"ichou":  # いちょう：黄色い扇
+			var yellow := Color("f2c230")
+			var pts := PackedVector2Array([Vector2(0, r * 0.35)])
+			for i in 13:
+				var ang := PI + PI * i / 12.0
+				pts.append(Vector2(cos(ang), sin(ang) * 0.85) * r * 0.75)
+			draw_colored_polygon(pts, yellow)
+			draw_line(Vector2(0, r * 0.35), Vector2(0, r * 0.8), Color("b8901d"), 4.0)
+			draw_line(Vector2(0, -r * 0.6), Vector2(0, -r * 0.2), FACE_BG, 4.0)
+		"donguri":  # どんぐり：茶色の実＋帽子
+			draw_circle(Vector2(0, r * 0.15), r * 0.42, Color("b9783a"))
+			draw_rect(Rect2(-r * 0.42, -r * 0.4, r * 0.84, r * 0.3), Color("6b4423"), true)
+			draw_line(Vector2(0, -r * 0.4), Vector2(0, -r * 0.6), Color("6b4423"), 5.0)
+		"kinoko":  # きのこ：赤いかさに白い点
+			draw_rect(Rect2(-r * 0.18, -r * 0.05, r * 0.36, r * 0.6), BONE, true)
+			var cap := PackedVector2Array()
+			for i in 17:
+				var ang := PI + PI * i / 16.0
+				cap.append(Vector2(cos(ang) * r * 0.75, sin(ang) * r * 0.6))
+			draw_colored_polygon(cap, Color("c0392b"))
+			for p in [Vector2(-r * 0.35, -r * 0.2), Vector2(0, -r * 0.4), Vector2(r * 0.35, -r * 0.2)]:
+				draw_circle(p, r * 0.1, BONE)
+		"kuri":  # くり：三角っぽい茶色の実
+			draw_colored_polygon(PackedVector2Array([
+				Vector2(0, -r * 0.65), Vector2(r * 0.6, r * 0.25), Vector2(r * 0.45, r * 0.5),
+				Vector2(-r * 0.45, r * 0.5), Vector2(-r * 0.6, r * 0.25),
+			]), Color("7a4a24"))
+			draw_rect(Rect2(-r * 0.45, r * 0.25, r * 0.9, r * 0.25), Color("d9b38c"), true)
+		"imo":  # さつまいも：紫の細長い実
+			draw_set_transform(size * 0.5, -0.5, Vector2.ONE)
+			draw_circle(Vector2(-r * 0.3, 0), r * 0.32, Color("8e3a7a"))
+			draw_circle(Vector2(r * 0.3, 0), r * 0.32, Color("8e3a7a"))
+			draw_rect(Rect2(-r * 0.3, -r * 0.32, r * 0.6, r * 0.64), Color("8e3a7a"), true)
+			draw_circle(Vector2(r * 0.62, 0), r * 0.12, Color("f2d27a"))
+			draw_set_transform(size * 0.5, 0.0, Vector2.ONE)
+		"dango":  # お月見だんご：白い丸が3つ
+			for p in [Vector2(-r * 0.3, r * 0.3), Vector2(r * 0.3, r * 0.3), Vector2(0, -r * 0.2)]:
+				draw_circle(p, r * 0.3, BONE)
+				draw_arc(p, r * 0.3, 0.0, TAU, 32, Color(0.75, 0.72, 0.65), 2.0, true)
+		"susuki":  # すすき：細い茎と穂
+			for dx in [-0.25, 0.0, 0.25]:
+				var x: float = dx * r
+				draw_line(Vector2(x, r * 0.75), Vector2(x * 1.6, -r * 0.4), Color("b7a76a"), 3.0)
+				draw_circle(Vector2(x * 1.6, -r * 0.5), r * 0.14, Color("e8dcb0"))
+				draw_circle(Vector2(x * 1.6, -r * 0.3), r * 0.11, Color("e8dcb0"))
 
 
 # 通常の絵柄：元の memory-match と同じ「色つき丸＋文字」

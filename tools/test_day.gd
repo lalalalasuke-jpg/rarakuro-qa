@@ -183,7 +183,30 @@ func _run() -> void:
 	check(main.day_label.text == "2日目　終業前", "3つとも直って終業前")
 	await create_timer(main.LEADER_DELAY + 0.3).timeout
 	check(main.day_result.visible and DayResult.total_score(main.reports, 0) == 300, "2日目の結果 300点")
-	check(main.day_result.next_button.disabled and main.day_result.next_button.text == "3日目へ（準備中）", "2日目の結果は「3日目へ（準備中）」")
+	check(not main.day_result.next_button.disabled and main.day_result.next_button.text == "3日目へ", "2日目の結果に「3日目へ」")
+	main.queue_free()
+
+	# --- 3日目：神経衰弱 v1.4 紅葉狩り ---
+	OfficeMain.next_day = 3
+	main = load("res://scenes/main.tscn").instantiate()
+	root.add_child(main)
+	await process_frame
+	check(main.day_no == 3 and main.game is MemoryMatch and main.game.edition == "autumn", "3日目は神経衰弱 v1.4（紅葉狩り）")
+	check(main.bugs.size() == 11 and main.bugs.all(func(b): return b.id.begins_with("MM-AU-")), "バグ候補は紅葉狩りの11個だけ")
+	check(main.chat_text.text.contains("v1.4") and main.spec.has("release_notes"), "リーダーのチャットと、仕様メモのリリースノート")
+	main.setup_bugs(["MM-AU-01", "MM-AU-06", "MM-AU-08"])
+	var au := func(id): return main.bugs.filter(func(b): return b.id == id)[0]
+	for id in ["MM-AU-01", "MM-AU-06", "MM-AU-08"]:
+		main.game.bug_checked.emit(id, true)
+		var r: Dictionary = au.call(id).report.duplicate()
+		if r.severity is Array:
+			r.severity = r.severity[0]
+		main._on_report_submitted(r)
+		check(main.chat_text.text.contains("修正しました"), "%s: 修正しました" % id)
+		main.game.bug_checked.emit(id, false)
+	await create_timer(main.LEADER_DELAY + 0.3).timeout
+	check(main.day_result.visible and DayResult.total_score(main.reports, 0) == 300, "3日目の結果 300点")
+	check(main.day_result.next_button.disabled and main.day_result.next_button.text == "4日目へ（準備中）", "3日目の結果は「4日目へ（準備中）」")
 	main.queue_free()
 
 	# 進んだ日の保存

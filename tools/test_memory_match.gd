@@ -119,5 +119,100 @@ func _run() -> void:
 		await wait(1.0)
 		g.queue_free()
 
+	await test_autumn()
 	print("RESULT: %s" % ("ALL OK" if failed == 0 else "%d FAILED" % failed))
 	quit(1 if failed else 0)
+
+
+# --- v1.4 紅葉狩り（MM-AU-01〜11）---
+func make_autumn(bugs: Array) -> MemoryMatch:
+	var game: MemoryMatch = load("res://scenes/titles/memory_match/memory_match.tscn").instantiate()
+	game.configure({"edition": "autumn"})
+	root.add_child(game)
+	game.start(bugs)
+	return game
+
+
+func pair_of(game: MemoryMatch, symbol: int) -> Array:
+	return cards(game).filter(func(c): return c.symbol_index == symbol)
+
+
+# 全ペアを順番にそろえてクリアする（クリア時のメダル数を返す）
+func clear_all(game: MemoryMatch) -> int:
+	var got := [-1]
+	game.cleared.connect(func(_m, medals): got[0] = medals)
+	for i in MemoryMatch.PAIR_COUNT:
+		var p := pair_of(game, i)
+		game._on_card_pressed(p[0]); game._on_card_pressed(p[1])
+		await wait(0.6 if game.has_bug("MM-AU-01") else 0.05)
+	return got[0]
+
+
+func test_autumn() -> void:
+	for on in [false, true]:
+		var tag := "ON" if on else "OFF"
+		var all_on := ["MM-AU-07", "MM-AU-08", "MM-AU-11"] if on else []
+		var g := make_autumn(all_on)
+		check(cards(g).all(func(c): return c.style == ("halloween" if on and c.symbol_index == MemoryMatch.BUG_AU08_SYMBOL else "autumn")),
+			"AU-08 %s: さつまいもの場所だけハロウィン絵柄=%s" % [tag, on])
+		check(g.banner_label.text.ends_with("11/4" if on else "11/14"), "AU-11 %s: バナー %s" % [tag, g.banner_label.text])
+		check((g.rule_label.text != MemoryMatch.RULE_TEXT) == on, "AU-07 %s: ルール説明の文字化け" % tag)
+		check(g.time_label.visible, "v1.4 はタイマーが見える")
+		g.queue_free()
+
+		# AU-01（デグレ）: 素早く3枚目
+		g = make_autumn(["MM-AU-01"] if on else [])
+		var p := three_different(g)
+		g._on_card_pressed(p[0]); g._on_card_pressed(p[1])
+		await wait(0.2)
+		g._on_card_pressed(p[2])
+		check(p[2].face_up == on, "AU-01 %s: 3枚目がめくれる=%s" % [tag, p[2].face_up])
+		await wait(1.6)
+		g.queue_free()
+
+		g = make_autumn(["MM-AU-02"] if on else [])
+		p = three_different(g)
+		g._on_card_pressed(p[0]); g._on_card_pressed(p[1])
+		await wait(1.0)
+		g._on_card_pressed(p[2])
+		check(p[2].face_up == (not on), "AU-02 %s: 外れたあとの1回目のタップでめくれる=%s" % [tag, p[2].face_up])
+		g._on_card_pressed(p[2])
+		check(p[2].face_up, "AU-02 %s: 2回目のタップではめくれる" % tag)
+		g.queue_free()
+
+		# AU-03: ペアで手数
+		g = make_autumn(["MM-AU-03", "MM-AU-04"] if on else [])
+		var pr := pair_of(g, 3)
+		g._on_card_pressed(pr[0]); g._on_card_pressed(pr[1])
+		check(g.moves == (2 if on else 1), "AU-03 %s: ペアで手数 %d" % [tag, g.moves])
+		# AU-04: 表のカードをもう一度
+		var one: MemoryCard = pair_of(g, 4)[0]
+		g._on_card_pressed(one); g._on_card_pressed(one)
+		check(one.face_up == (not on), "AU-04 %s: 表のカードを押したら表のまま=%s" % [tag, one.face_up])
+		g.queue_free()
+
+		# AU-05: もみじの特効
+		g = make_autumn(["MM-AU-05"] if on else [])
+		var m := pair_of(g, MemoryMatch.MOMIJI_SYMBOL)
+		g._on_card_pressed(m[0])
+		g.elapsed = 20.0
+		g._on_card_pressed(m[1])
+		await wait(0.05)
+		check(absf(g.elapsed - (20.0 if on else 15.0)) < 0.3, "AU-05 %s: もみじのペアでタイマー %.1f" % [tag, g.elapsed])
+		g.queue_free()
+
+		# AU-09 / AU-10 / AU-06: クリア
+		g = make_autumn(["MM-AU-09", "MM-AU-10", "MM-AU-06"] if on else [])
+		var medals: int = await clear_all(g)
+		check(medals == (3 if on else 5), "AU-09 %s: 60秒以内クリアのメダル ×%d" % [tag, medals])
+		check(g.timer_running == on, "AU-10 %s: クリア後もタイマーが動く=%s" % [tag, g.timer_running])
+		check(g.clear_reward_label.text.contains("かぼちゃ" if on else "もみじ"), "AU-06 %s: %s" % [tag, g.clear_reward_label.text])
+		g.queue_free()
+
+	# 遅いクリアはボーナスなし
+	var slow := make_autumn([])
+	slow.elapsed = 70.0
+	slow.timer_running = true
+	var got: int = await clear_all(slow)
+	check(got == 3, "60秒をこえたクリアは ×3")
+	slow.queue_free()

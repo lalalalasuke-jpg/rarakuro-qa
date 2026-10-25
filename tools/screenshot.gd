@@ -18,14 +18,15 @@ func _run() -> void:
 	var args := OS.get_cmdline_user_args()
 	var mode: String = args[1] if args.size() > 1 else ""
 	# 「d2_◯◯」は2日目（スイカゲーム）で ◯◯ のモード
-	var day := 2 if mode.begins_with("d2") else 1
-	mode = mode.trim_prefix("d2").trim_prefix("_")
+	var day := int(mode.substr(1, 1)) if mode.begins_with("d") and mode.substr(1, 1).is_valid_int() else 1
+	if day > 1:
+		mode = mode.substr(2).trim_prefix("_")
 	OfficeMain.next_day = day
 	var main = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
 	await create_timer(0.3).timeout
 	# 本番はランダム。スクショは固定
-	main.setup_bugs(["MM-HW-001", "MM-HW-002", "MM-HW-003"] if day == 1 else ["SK-12", "SK-04", "SK-07"])
+	main.setup_bugs({1: ["MM-HW-001", "MM-HW-002", "MM-HW-003"], 2: ["SK-12", "SK-04", "SK-07"], 3: ["MM-AU-07", "MM-AU-08", "MM-AU-11"]}[day])
 	match mode:
 		"play":  # スイカゲームを少し自動で遊んだところ
 			for x in [200, 330, 470, 260, 400, 520, 300, 440]:

@@ -78,6 +78,11 @@ func show_spec(spec: Dictionary) -> void:
 	_heading(spec.get("rewards_heading", "報酬"))
 	for r in spec.rewards:
 		_label("・" + r, 24, INK)
+	# アップデートの版には「リリースノート（この版で直したこと・変えたこと）」が付く
+	if spec.has("release_notes"):
+		_heading(spec.get("release_notes_heading", "リリースノート"))
+		for r in spec.release_notes:
+			_label("・" + r, 22, INK)
 	_heading(spec.get("symbols_heading", "絵柄"))
 	_label(spec.symbols_note, 22, INK)
 

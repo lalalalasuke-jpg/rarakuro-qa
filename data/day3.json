@@ -1,0 +1,17 @@
+{
+  "_comment": "3日目の担当。神経衰弱が v1.4 にアップデート（1日目の修正入り）。bug_pool から pick 個をランダムに（同じ group は重ならない）",
+  "day": 3,
+  "title_scene": "res://scenes/titles/memory_match/memory_match.tscn",
+  "title_options": {"edition": "autumn"},
+  "spec": "res://data/spec_mm_autumn.json",
+  "report": "res://data/report_mm_autumn.json",
+  "chat_from": "リーダー",
+  "chat": "おはよう！今日は神経衰弱「v1.4 紅葉狩りイベント」の担当だよ。前に報告した修正も入ってるから、リリースノートも見てね。",
+  "turn_chats": {
+    "昼": "お昼だよ。直したって書いてあるところが、本当に直ってるかも試してみてね。",
+    "夕": "もうすぐ定時だよ。修正で別の所が壊れてないかも気にしてみてね。",
+    "残業": "定時過ぎちゃったね…。残りのバグ、もうひと踏ん張り！"
+  },
+  "bug_pool": ["MM-AU-01", "MM-AU-02", "MM-AU-03", "MM-AU-04", "MM-AU-05", "MM-AU-06", "MM-AU-07", "MM-AU-08", "MM-AU-09", "MM-AU-10", "MM-AU-11"],
+  "pick": 3
+}

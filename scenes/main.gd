@@ -16,7 +16,7 @@ extends Node2D
 const BUGS_PATH := "res://data/bugs.json"
 const DAY_PATH := "res://data/day%d.json"
 ## 作ってある最後の日
-const LAST_DAY := 2
+const LAST_DAY := 3
 ## どこまで進んだかの保存先（次に開いたときはこの日から）
 const PROGRESS_PATH := "user://progress.json"
 const TURNS := ["朝", "昼", "夕"]
@@ -97,6 +97,8 @@ func _ready() -> void:
 	report_form_data = _load_json(day.report)
 
 	game = load(day.title_scene).instantiate()
+	if day.has("title_options") and game.has_method("configure"):
+		game.configure(day.title_options)
 	game.position = SCREEN_POS
 	game.scale = Vector2(SCREEN_SCALE, SCREEN_SCALE)
 	monitor.add_child(game)
