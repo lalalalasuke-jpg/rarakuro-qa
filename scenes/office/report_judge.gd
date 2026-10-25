@@ -14,6 +14,16 @@ const DUPLICATE := "duplicate"        # 重複です（同じバグを報告済�
 const SEVERITY_ORDER := ["低", "中", "高"]
 const CHECK_KEYS := ["where", "steps", "target", "expected"]
 
+# 採点（報告1件100点満点）。「実際の動き」が合っている＝バグを特定できた点
+const POINTS := {"actual": 40, "steps": 20, "where": 10, "target": 10, "expected": 10, "severity": 10}
+const SEVERITY_NEAR_POINTS := 5
+## 「仕様です」「再現しません」「重複です」の報告（開発さんの手間）
+const MISS_PENALTY := -10
+## 残業1ターンごと
+const OVERTIME_PENALTY := -10
+## ランク（満点に対する割合）
+const RANKS := [["S", 0.9], ["A", 0.75], ["B", 0.5], ["C", 0.0]]
+
 
 # report: 項目キー→選んだ文言。bugs: bugs.json の bugs。
 # enabled: 今仕込まれているバグ ID。observed: プレイヤーが画面で見たバグ ID。reported: 報告済みのバグ ID
@@ -34,14 +44,44 @@ static func judge(report: Dictionary, bugs: Array, enabled: Array, observed: Arr
 	var checks := {}
 	for key in CHECK_KEYS:
 		checks[key] = report.get(key) == bug.report[key]
-	var diff := absi(SEVERITY_ORDER.find(report.get("severity")) - SEVERITY_ORDER.find(bug.report.severity))
+	# 重要度は正解が複数のこともある（配列）。一番近い正解との差で見る
+	var answers = bug.report.severity
+	if answers is String:
+		answers = [answers]
+	var diff := 99
+	for a in answers:
+		diff = mini(diff, absi(SEVERITY_ORDER.find(report.get("severity")) - SEVERITY_ORDER.find(a)))
 	var severity := "exact" if diff == 0 else ("near" if diff == 1 else "off")
+	# 手順が違っても、手順が大事でないバグ（マスタ設定の修正など）は直してもらえる
+	var fixable: bool = checks.steps or not bug.report.get("steps_required", true)
 	return {
-		"result": FIX if checks.steps else CANNOT_REPRODUCE,
+		"result": FIX if fixable else CANNOT_REPRODUCE,
 		"bug_id": bug.id,
 		"checks": checks,
 		"severity": severity,
 	}
+
+
+# 報告1件の点数。修正されなかった報告は減点だけ
+static func score(judge: Dictionary) -> int:
+	if judge.result != FIX:
+		return MISS_PENALTY
+	var pts: int = POINTS.actual
+	for key in CHECK_KEYS:
+		if judge.checks[key]:
+			pts += POINTS[key]
+	if judge.severity == "exact":
+		pts += POINTS.severity
+	elif judge.severity == "near":
+		pts += SEVERITY_NEAR_POINTS
+	return pts
+
+
+static func rank(total: int, max_total: int) -> String:
+	for r in RANKS:
+		if total >= max_total * r[1]:
+			return r[0]
+	return "C"
 
 
 # 開発からの返答の見出し
@@ -59,7 +99,10 @@ static func result_text(result: String) -> String:
 static func dev_reply(report: Dictionary, judge: Dictionary) -> String:
 	var subject := "「%s」の件" % report.get("actual", "")
 	match judge.result:
-		FIX: return "%s、修正しました！修正版をもう入れてあります。" % subject
+		FIX:
+			if not judge.checks.steps:
+				return "%s、手順は少し違ったけど原因は分かったので修正しました！修正版をもう入れてあります。" % subject
+			return "%s、修正しました！修正版をもう入れてあります。" % subject
 		CANNOT_REPRODUCE: return "%s、書いてある手順だと再現しませんでした…。手順をもう一度確認してもらえますか？" % subject
 		BY_DESIGN: return "%s、確認しましたが仕様どおりの動きです。" % subject
 		DUPLICATE: return "%sは、もう報告をもらっています。" % subject

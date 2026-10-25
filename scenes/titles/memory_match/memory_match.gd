@@ -39,6 +39,8 @@ var busy := false
 var bugs: Array = []
 # 2枚目をめくった時刻（ミリ秒）。MM-HW-002 の操作をしたかの判定に使う
 var second_flip_msec := -100000
+# このプレイでカードを触ったか（MM-HW-005 の「画面を見た」判定用）
+var touched := false
 
 @onready var grid: GridContainer = $Grid
 @onready var banner_label: Label = $Banner/BannerLabel
@@ -74,8 +76,9 @@ func start(enabled_bugs: Array) -> void:
 	_build_grid()
 	_update_hud()
 	# ★バグ MM-HW-005: イベント期間の表示が仕様（10/31まで）と違う。画面を開けば見える
+	# （「見た」扱いにするのは、そのプレイで最初にカードを触った時）
 	banner_label.text = BUG_005_BANNER if has_bug("MM-HW-005") else BANNER_TEXT
-	_check.call_deferred("MM-HW-005")
+	touched = false
 
 
 # ペアぶんの絵柄を2枚ずつ用意してシャッフルし、カードを並べる
@@ -103,6 +106,9 @@ func _is_pair(a: MemoryCard, b: MemoryCard) -> bool:
 
 
 func _on_card_pressed(card: MemoryCard) -> void:
+	if not touched:
+		touched = true
+		_check("MM-HW-005")
 	if busy:
 		# 判定中に別のカードを押した＝ MM-HW-002 の操作（バグが無ければ何も起きない）
 		if not card.face_up and not card.matched \

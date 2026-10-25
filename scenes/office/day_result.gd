@@ -85,13 +85,20 @@ func show_result(day_no: int, reports: Array, bugs: Array, fixed: Array, verifie
 	for child in body.get_children():
 		child.queue_free()
 
+	var total := total_score(reports, overtime)
+	var max_total := bugs.size() * 100
+	var prev_best := _load_best(day_no)
+	if total > prev_best:
+		_save_best(day_no, total)
 	_label("%d日目の結果" % day_no, 34, INK)
+	_label("スコア　%d / %d　ランク %s" % [total, max_total, ReportJudge.rank(total, max_total)], 32, ACCENT)
+	_label("ベスト %d%s" % [maxi(total, prev_best), "　（新記録！）" if total > prev_best else ""], 20, Color(INK, 0.7))
 	_label("見つけて直ったバグ　%d / %d" % [fixed.size(), bugs.size()], 28, GOOD if fixed.size() == bugs.size() else ACCENT)
 	_label("修正確認　%d / %d" % [verified.size(), fixed.size()], 24, GOOD if verified.size() == fixed.size() else ACCENT)
 	if overtime == 0:
 		_label("定時で完了！", 24, GOOD)
 	else:
-		_label("残業 %dターン" % overtime, 24, ACCENT)
+		_label("残業 %dターン（%d点）" % [overtime, overtime * ReportJudge.OVERTIME_PENALTY], 24, ACCENT)
 
 	_heading("提出した報告")
 	if reports.is_empty():
@@ -100,7 +107,7 @@ func show_result(day_no: int, reports: Array, bugs: Array, fixed: Array, verifie
 		var judge: Dictionary = r.judge
 		var ok: bool = judge.result == ReportJudge.FIX
 		_label("%s：「%s」" % [r.turn, r.report.get("actual", "")], 22, INK)
-		_label("　→ 開発の返事：%s" % ReportJudge.result_text(judge.result), 22, GOOD if ok else BAD)
+		_label("　→ 開発の返事：%s（%+d点）" % [ReportJudge.result_text(judge.result), ReportJudge.score(judge)], 22, GOOD if ok else BAD)
 		if judge.has("checks"):
 			var marks := []
 			for key in ReportJudge.CHECK_KEYS:
@@ -114,6 +121,29 @@ func show_result(day_no: int, reports: Array, bugs: Array, fixed: Array, verifie
 		for b in missed:
 			_label("・%s（%s）" % [b.title, b.trigger], 20, BAD)
 	visible = true
+
+
+# 1日のスコア：報告ごとの点数の合計＋残業の減点（0点より下にはしない）
+static func total_score(reports: Array, overtime: int) -> int:
+	var total := overtime * ReportJudge.OVERTIME_PENALTY
+	for r in reports:
+		total += ReportJudge.score(r.judge)
+	return maxi(total, 0)
+
+
+# ベストスコアは端末に保存する（Web ではブラウザに保存される。読み書きできなくても遊べる）
+func _load_best(day_no: int) -> int:
+	var path := "user://best_day%d.json" % day_no
+	if not FileAccess.file_exists(path):
+		return 0
+	var data = JSON.parse_string(FileAccess.get_file_as_string(path))
+	return int(data.get("best", 0)) if data is Dictionary else 0
+
+
+func _save_best(day_no: int, best: int) -> void:
+	var f := FileAccess.open("user://best_day%d.json" % day_no, FileAccess.WRITE)
+	if f:
+		f.store_string(JSON.stringify({"best": best}))
 
 
 func _heading(text: String) -> void:

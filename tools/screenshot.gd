@@ -8,6 +8,8 @@ func _initialize() -> void:
 func submit(main, i: int, overrides := {}) -> void:
 	main.game.bug_checked.emit(main.bugs[i].id, true)
 	var r: Dictionary = main.bugs[i].report.duplicate()
+	if r.severity is Array:
+		r.severity = r.severity[0]
 	r.merge(overrides, true)
 	main._on_report_submitted(r)
 
@@ -18,6 +20,7 @@ func _run() -> void:
 	var main = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
 	await create_timer(0.3).timeout
+	main.setup_bugs(["MM-HW-001", "MM-HW-002", "MM-HW-003"])  # 本番はランダム。スクショは固定
 	match mode:
 		"faceup":
 			for c in main.game.grid.get_children():
@@ -42,14 +45,13 @@ func _run() -> void:
 			submit(main, 1)
 			await create_timer(main.LEADER_DELAY + 0.2).timeout
 			main.game.bug_checked.emit("MM-HW-002", false)
-		"result":  # 手順違い1件＋残業ありで1日を終えたところ
+		"result":  # 手順違い（でも直してもらえた）1件ありで、定時に1日を終えたところ
 			submit(main, 1)
 			main.game.bug_checked.emit("MM-HW-002", false)
 			submit(main, 0, {"steps": "ゆっくり1枚ずつめくる", "severity": "高"})
+			main.game.bug_checked.emit("MM-HW-001", false)
 			submit(main, 2)
 			main.game.bug_checked.emit("MM-HW-003", false)
-			submit(main, 0)
-			main.game.bug_checked.emit("MM-HW-001", false)
 			await create_timer(main.LEADER_DELAY + 0.5).timeout
 	await create_timer(0.3).timeout
 	await RenderingServer.frame_post_draw

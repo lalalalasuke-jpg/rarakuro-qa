@@ -1,5 +1,5 @@
 {
-  "_comment": "1日目の担当。bugs はこの日に有効にするバグの ID（data/bugs.json）。turn_chats は各ターンの始めのリーダーのひとこと（返事が届いたターンは開発さんの返事が優先）",
+  "_comment": "1日目の担当。bug_pool の中から毎回 pick 個をランダムに選んで仕込む（data/bugs.json の ID）。turn_chats は各ターンの始めのリーダーのひとこと（返事が届いたターンは開発さんの返事が優先）",
   "day": 1,
   "spec": "res://data/spec_mm_halloween.json",
   "report": "res://data/report_mm_halloween.json",
@@ -10,5 +10,6 @@
     "夕": "もうすぐ定時だよ。最後のひとがんばり！",
     "残業": "定時過ぎちゃったね…。残りのバグ、もうひと踏ん張り！"
   },
-  "bugs": ["MM-HW-001", "MM-HW-002", "MM-HW-003"]
+  "bug_pool": ["MM-HW-001", "MM-HW-002", "MM-HW-003", "MM-HW-004", "MM-HW-005", "MM-HW-006", "MM-HW-007"],
+  "pick": 3
 }

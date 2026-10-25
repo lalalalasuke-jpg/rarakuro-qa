@@ -53,4 +53,5 @@ git -C .claude-memory push
 ## このゲーム（ららくろそふとQA）
 
 - 企画書は `docs/design.md`（決定事項と改訂履歴もここ）。くろすけの企画メモは `bug-hunt-game-plan.md`（claude-memory）
+- **開発の記録 `docs/dev-log.md`**: 作業の区切りごとに「きっかけ（ららすけの言葉）・決めたこと・作ったもの・コツ」を追記する（ららすけの希望：次のゲームを作るときの参考にしたい）
 - （2026-10-26）リポジトリ作成時は gh トークンに `workflow` 権限が無く workflow の push が拒否された → 同日 `gh auth refresh -s workflow` で解消済み。今は普通に git push でよい

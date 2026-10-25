@@ -146,6 +146,14 @@ offset_bottom = 1062.0
 mouse_filter = 2
 color = Color(0.25, 0.25, 0.28, 1)
 
+[node name="RebootButton" type="Button" parent="HUD"]
+offset_left = 548.0
+offset_top = 1032.0
+offset_right = 668.0
+offset_bottom = 1060.0
+theme_override_font_sizes/font_size = 16
+text = "再起動"
+
 [node name="Desk" type="ColorRect" parent="HUD"]
 offset_top = 1062.0
 offset_right = 720.0

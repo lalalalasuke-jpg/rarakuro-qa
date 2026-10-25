@@ -1,5 +1,5 @@
 {
-  "_comment": "バグのデータ（企画書 docs/design.md の6章・8章）。report は報告書の正解（data/report_*.json の選択肢と同じ文言）",
+  "_comment": "バグのデータ（企画書 docs/design.md の6章・8章）。report は報告書の正解（data/report_*.json の選択肢と同じ文言）。report.severity は配列なら全部正解。steps_required=false は手順が違っても直してもらえるバグ（マスタ設定の修正など）",
   "bugs": [
     {
       "id": "MM-HW-001",
@@ -15,10 +15,11 @@
       "report": {
         "where": "プレイ中の盤面",
         "steps": "カードを1枚めくる",
+        "steps_required": false,
         "target": "カードの絵柄",
         "expected": "8種類すべてハロウィン絵柄",
         "actual": "ハロウィン絵柄ではないカードがある",
-        "severity": "低"
+        "severity": ["低", "中"]
       }
     },
     {
@@ -55,6 +56,7 @@
       "report": {
         "where": "クリア画面",
         "steps": "全ペアをそろえてクリアする",
+        "steps_required": false,
         "target": "クリア報酬の数",
         "expected": "クリアで「かぼちゃメダル」×3",
         "actual": "メダルが×1しかもらえない",
@@ -95,6 +97,7 @@
       "report": {
         "where": "イベントバナー",
         "steps": "ゲーム画面を開く",
+        "steps_required": false,
         "target": "イベント期間の表示",
         "expected": "期間は10/26〜10/31",
         "actual": "期間の表示が違う",

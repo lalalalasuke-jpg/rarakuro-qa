@@ -62,6 +62,7 @@ var chat_serial := 0
 @onready var report_form: ReportForm = $HUD/ReportForm
 @onready var report_button: Button = $HUD/Desk/ReportButton
 @onready var no_bug_button: Button = $HUD/Desk/NoBugButton
+@onready var reboot_button: Button = $HUD/RebootButton
 @onready var day_result: DayResult = $HUD/DayResult
 @onready var dev_button: Button = $HUD/Header/DevButton
 @onready var dev_panel: Control = $HUD/DevPanel
@@ -75,15 +76,18 @@ func _ready() -> void:
 	day = _load_json(DAY_PATH)
 	spec = _load_json(day.spec)
 	bugs = _load_json(BUGS_PATH).bugs
-	day_bugs = bugs.filter(func(b): return day.bugs.has(b.id))
 	report_form_data = _load_json(day.report)
-	enabled = day.bugs.duplicate()
+	# その日のバグは候補の中から毎回ランダムに選ぶ（遊ぶたびに違うバグが出る）
+	var pool: Array = day.bug_pool.duplicate()
+	pool.shuffle()
+	setup_bugs(pool.slice(0, day.pick))
 
 	memo_button.pressed.connect(func(): memo.show_spec(spec))
 	report_button.pressed.connect(func():
 		report_form.open(report_form_data, bugs, "%s %s %s" % [spec.title, spec.event, spec.version]))
 	report_form.submitted.connect(_on_report_submitted)
 	no_bug_button.pressed.connect(_on_no_bug_pressed)
+	reboot_button.pressed.connect(_restart)
 	day_result.retry_pressed.connect(func(): get_tree().reload_current_scene())
 	game.bug_checked.connect(_on_bug_checked)
 	_style_desk_disabled()
@@ -101,6 +105,22 @@ func _load_json(path: String) -> Dictionary:
 		push_error("%s が読めない" % path)
 		return {}
 	return data
+
+
+# その日に仕込むバグを決める（テストからも呼んで固定できる）
+func setup_bugs(ids: Array) -> void:
+	enabled = ids.duplicate()
+	day_bugs = bugs.filter(func(b): return ids.has(b.id))
+	if switches.get_child_count() > 0:
+		_sync_dev_switches()
+		_restart()
+
+
+func _bug(id: String) -> Dictionary:
+	for b in bugs:
+		if b.id == id:
+			return b
+	return {}
 
 
 func _turn_name() -> String:
@@ -121,7 +141,7 @@ func _start_turn() -> void:
 		_say(DEV, ReportJudge.dev_reply(pending.report, pending.judge))
 		if pending.judge.result == ReportJudge.FIX:
 			verifying.append(pending.judge.bug_id)
-			_say_later(LEADER, CHAT_VERIFY % pending.report.steps)
+			_say_later(LEADER, CHAT_VERIFY % _bug(pending.judge.bug_id).report.steps)
 		pending = {}
 	elif turn == 0:
 		_say(LEADER, day.chat)
@@ -181,6 +201,8 @@ func _on_fix_verified() -> void:
 
 
 func _on_report_submitted(report: Dictionary) -> void:
+	if closing or not verifying.is_empty():
+		return  # 修正確認中・終業前は報告できない（ボタンも押せないが念のため）
 	var judge := ReportJudge.judge(report, bugs, enabled, observed, fixed)
 	_show_dev_judge(judge)
 	report_form.visible = false
