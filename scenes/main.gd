@@ -2,8 +2,7 @@ extends Node2D
 
 # いまは「1日目の試作」の第1歩：作中タイトル（神経衰弱 v1.3）を単体で遊べる確認用画面。
 # 画面下の開発用スイッチで、バグを1つずつ ON/OFF してプレイし直せる。
-# UI 文字列は ASCII のみにすること（Godot 標準フォントに日本語グリフが無く
-# Web だと豆腐になる。日本語を出したいなら日本語フォントを同梱してテーマに設定）。
+# 日本語は fonts/NotoSansJP-Subset.ttf（project.godot でテーマの標準フォントに設定）で表示できる。
 
 const BUGS_PATH := "res://data/bugs.json"
 

@@ -46,7 +46,7 @@ git -C .claude-memory push
 
 - `main` に push すると GitHub Actions が Web 書き出し → GitHub Pages に自動反映（`DEPLOY.md` / `README.md`）
 - 本番 URL: `https://lalalalasuke-jpg.github.io/<このリポジトリ名>/`
-- UI 文字列は **ASCII のみ**（標準フォントに日本語グリフが無く Web で豆腐になる）
+- 日本語OK: `fonts/NotoSansJP-Subset.ttf`（JIS第1・第2水準＋かな＋英数、約2.6MB）を `project.godot` の `gui/theme/custom_font` に設定済み。**JIS第2水準に無い漢字や絵文字は豆腐になる**。足りない文字は `tools/make_font_subset.py` で作り直す
 - 書き出しは標準版 Godot（mono 版は Web 不可）。ローカル確認は `tools/build_web.ps1` → `python tools/serve_web.py`
 - クラウド環境には Godot 本体が無い。コード目視チェックまでで良い（PR に明記する）。ローカルでの動作確認は PC 側のくろすけが `--headless --import` / `--quit-after N` で行う
 

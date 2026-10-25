@@ -117,7 +117,7 @@ func _on_clear() -> void:
 	# ★バグ MM-HW-003: 報酬の数がイベント仕様メモ（×3）と違う
 	var medals := BUG_003_MEDALS if has_bug("MM-HW-003") else CLEAR_MEDALS
 	clear_moves_label.text = "MOVES %d" % moves
-	clear_reward_label.text = "REWARD: PUMPKIN MEDAL x%d" % medals
+	clear_reward_label.text = "報酬：かぼちゃメダル ×%d" % medals
 	clear_panel.visible = true
 	cleared.emit(moves, medals)
 

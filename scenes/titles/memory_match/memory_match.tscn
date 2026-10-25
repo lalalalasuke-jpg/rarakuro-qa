@@ -69,6 +69,15 @@ theme_override_constants/h_separation = 10
 theme_override_constants/v_separation = 10
 columns = 4
 
+[node name="RuleLabel" type="Label" parent="."]
+offset_top = 896.0
+offset_right = 720.0
+offset_bottom = 940.0
+theme_override_colors/font_color = Color(0.88, 0.85, 0.92, 1)
+theme_override_font_sizes/font_size = 26
+text = "カードを2枚めくって、同じ絵柄をそろえよう！"
+horizontal_alignment = 1
+
 [node name="ClearPanel" type="Control" parent="."]
 visible = false
 offset_right = 720.0
@@ -103,5 +112,6 @@ offset_right = 720.0
 offset_bottom = 556.0
 theme_override_colors/font_color = Color(0.97, 0.86, 0.44, 1)
 theme_override_font_sizes/font_size = 30
-text = "REWARD: PUMPKIN MEDAL x3"
+text = "報酬：かぼちゃメダル ×3"
 horizontal_alignment = 1
+
