@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene load_steps=3 format=3]
 
 [ext_resource type="Script" path="res://scenes/main.gd" id="1"]
+[ext_resource type="PackedScene" path="res://scenes/titles/memory_match/memory_match.tscn" id="2"]
 
 [node name="Main" type="Node2D"]
 script = ExtResource("1")
@@ -13,17 +14,33 @@ color = Color(0.11, 0.12, 0.16, 1)
 
 [node name="HUD" type="CanvasLayer" parent="."]
 
-[node name="Label" type="Label" parent="HUD"]
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -320.0
-offset_top = -70.0
-offset_right = 320.0
-offset_bottom = 70.0
-theme_override_colors/font_color = Color(0.9, 0.9, 0.95, 1)
-theme_override_font_sizes/font_size = 44
-text = "It works!"
-horizontal_alignment = 1
-vertical_alignment = 1
+[node name="MemoryMatch" parent="HUD" instance=ExtResource("2")]
+
+[node name="DevPanel" type="Control" parent="HUD"]
+offset_top = 980.0
+offset_right = 720.0
+offset_bottom = 1280.0
+mouse_filter = 2
+
+[node name="Caption" type="Label" parent="HUD/DevPanel"]
+offset_left = 30.0
+offset_right = 690.0
+offset_bottom = 40.0
+theme_override_colors/font_color = Color(0.6, 0.65, 0.75, 1)
+theme_override_font_sizes/font_size = 22
+text = "DEV: BUG SWITCHES (MM-HW-xxx)"
+
+[node name="Switches" type="HBoxContainer" parent="HUD/DevPanel"]
+offset_left = 30.0
+offset_top = 50.0
+offset_right = 690.0
+offset_bottom = 114.0
+theme_override_constants/separation = 20
+
+[node name="Restart" type="Button" parent="HUD/DevPanel"]
+offset_left = 30.0
+offset_top = 140.0
+offset_right = 690.0
+offset_bottom = 210.0
+theme_override_font_sizes/font_size = 26
+text = "RESTART"
