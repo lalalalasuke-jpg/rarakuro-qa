@@ -1,0 +1,16 @@
+{
+  "_comment": "2日目の担当。bug_pool の中から毎回 pick 個をランダムに選んで仕込む（同じ group のバグは重ならない）。turn_chats は各ターンの始めのリーダーのひとこと",
+  "day": 2,
+  "title_scene": "res://scenes/titles/suika/suika.tscn",
+  "spec": "res://data/spec_sk_autumn.json",
+  "report": "res://data/report_sk_autumn.json",
+  "chat_from": "リーダー",
+  "chat": "おはよう！今日の担当は「スイカゲーム 秋の味覚フェア v2.1」だよ。昨日とは別のタイトルだから、仕様メモをよく読んでね。",
+  "turn_chats": {
+    "昼": "お昼だよ。スイカゲームはスコアの計算も仕様メモと見比べてみてね。",
+    "夕": "もうすぐ定時だよ。最後のひとがんばり！",
+    "残業": "定時過ぎちゃったね…。残りのバグ、もうひと踏ん張り！"
+  },
+  "bug_pool": ["SK-01", "SK-02", "SK-03", "SK-04", "SK-05", "SK-06", "SK-07", "SK-08", "SK-09", "SK-10", "SK-11", "SK-12", "SK-13", "SK-14"],
+  "pick": 3
+}

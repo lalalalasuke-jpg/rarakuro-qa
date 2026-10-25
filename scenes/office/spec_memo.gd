@@ -4,12 +4,12 @@ extends Control
 # 仕様メモ（紙の資料ふう）。中身は仕様データ（data/spec_*.json）から組み立てる。
 # 全画面を覆い、下のゲームは押せなくなる。「閉じる」で消える。
 
-const CARD := preload("res://scenes/titles/memory_match/card.tscn")
 const PAPER := Color(0.98, 0.96, 0.9)
 const INK := Color(0.15, 0.14, 0.18)
 const ACCENT := Color(0.75, 0.38, 0.08)
 
 var body: VBoxContainer
+var scroll: ScrollContainer
 
 
 func _ready() -> void:
@@ -37,11 +37,17 @@ func _ready() -> void:
 	add_child(paper)
 
 	var outer := VBoxContainer.new()
+	outer.add_theme_constant_override("separation", 12)
 	paper.add_child(outer)
+	# 長い仕様メモはスクロールして読む（「閉じる」は常に下に見えている）
+	scroll = ScrollContainer.new()
+	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	outer.add_child(scroll)
 	body = VBoxContainer.new()
-	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	body.add_theme_constant_override("separation", 10)
-	outer.add_child(body)
+	scroll.add_child(body)
 
 	var close := Button.new()
 	close.text = "閉じる"
@@ -57,6 +63,7 @@ func _ready() -> void:
 
 
 func show_spec(spec: Dictionary) -> void:
+	scroll.scroll_vertical = 0
 	for child in body.get_children():
 		child.queue_free()
 
@@ -68,27 +75,26 @@ func show_spec(spec: Dictionary) -> void:
 	_heading("ルール")
 	for r in spec.rules:
 		_label("・" + r, 24, INK)
-	_heading("報酬")
+	_heading(spec.get("rewards_heading", "報酬"))
 	for r in spec.rewards:
 		_label("・" + r, 24, INK)
-	_heading("絵柄")
+	_heading(spec.get("symbols_heading", "絵柄"))
 	_label(spec.symbols_note, 22, INK)
 
+	# 絵柄の一覧。絵は作中タイトルのスクリプトの make_icon(番号, 大きさ) で描く
+	var icon_script: Script = load(spec.icon_script)
+	var columns: int = spec.get("icon_columns", 4)
+	var icon_size: float = spec.get("icon_size", 124)
 	var grid := GridContainer.new()
-	grid.columns = 4
+	grid.columns = columns
 	grid.add_theme_constant_override("h_separation", 16)
 	grid.add_theme_constant_override("v_separation", 8)
 	body.add_child(grid)
 	for i in spec.symbols.size():
 		var cell := VBoxContainer.new()
 		cell.add_theme_constant_override("separation", 2)
-		var card: MemoryCard = CARD.instantiate()
-		card.custom_minimum_size = Vector2(124, 124)
-		card.symbol_index = i
-		card.face_up = true
-		card.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		cell.add_child(card)
-		var name_label := _make_label(spec.symbols[i], 20, INK)
+		cell.add_child(icon_script.make_icon(i, icon_size))
+		var name_label := _make_label(spec.symbols[i], 18 if columns > 4 else 20, INK)
 		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		cell.add_child(name_label)
 		grid.add_child(cell)

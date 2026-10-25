@@ -1,6 +1,7 @@
 {
   "_comment": "1日目の担当。bug_pool の中から毎回 pick 個をランダムに選んで仕込む（data/bugs.json の ID）。turn_chats は各ターンの始めのリーダーのひとこと（返事が届いたターンは開発さんの返事が優先）",
   "day": 1,
+  "title_scene": "res://scenes/titles/memory_match/memory_match.tscn",
   "spec": "res://data/spec_mm_halloween.json",
   "report": "res://data/report_mm_halloween.json",
   "chat_from": "リーダー",

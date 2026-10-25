@@ -4,6 +4,7 @@ extends Control
 # 1日の結果。報告ごとの開発の返事と正確さ、見逃したバグ、残業したターン数を見せる。
 
 signal retry_pressed
+signal next_day_pressed
 
 const PAPER := Color(0.98, 0.96, 0.9)
 const INK := Color(0.15, 0.14, 0.18)
@@ -14,6 +15,8 @@ const CHECK_LABELS := {"where": "どこで", "steps": "手順", "target": "何�
 const SEVERITY_TEXT := {"exact": "○", "near": "△", "off": "×"}
 
 var body: VBoxContainer
+var retry_button: Button
+var next_button: Button
 
 
 func _ready() -> void:
@@ -53,13 +56,12 @@ func _ready() -> void:
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 16)
 	outer.add_child(buttons)
-	var retry := _make_big_button("もう一度1日目", Color(0.17, 0.22, 0.33))
-	retry.pressed.connect(func(): retry_pressed.emit())
-	buttons.add_child(retry)
-	# 2日目はまだ無いので押せないボタンだけ置いておく
-	var next_day := _make_big_button("2日目へ（準備中）", ACCENT)
-	next_day.disabled = true
-	buttons.add_child(next_day)
+	retry_button = _make_big_button("もう一度", Color(0.17, 0.22, 0.33))
+	retry_button.pressed.connect(func(): retry_pressed.emit())
+	buttons.add_child(retry_button)
+	next_button = _make_big_button("次の日へ", ACCENT)
+	next_button.pressed.connect(func(): next_day_pressed.emit())
+	buttons.add_child(next_button)
 
 
 func _make_big_button(text: String, color: Color) -> Button:
@@ -80,10 +82,13 @@ func _make_big_button(text: String, color: Color) -> Button:
 
 
 # day_no: 何日目、reports: [{turn, report, judge}]、bugs: その日のバグデータ、fixed: 直ったバグ ID、
-# verified: 修正確認が済んだバグ ID、overtime: 残業ターン数
-func show_result(day_no: int, reports: Array, bugs: Array, fixed: Array, verified: Array, overtime: int) -> void:
+# verified: 修正確認が済んだバグ ID、overtime: 残業ターン数、has_next: 次の日が作ってあるか
+func show_result(day_no: int, reports: Array, bugs: Array, fixed: Array, verified: Array, overtime: int, has_next := false) -> void:
 	for child in body.get_children():
 		child.queue_free()
+	retry_button.text = "もう一度%d日目" % day_no
+	next_button.text = "%d日目へ" % (day_no + 1) if has_next else "%d日目へ（準備中）" % (day_no + 1)
+	next_button.disabled = not has_next
 
 	var total := total_score(reports, overtime)
 	var max_total := bugs.size() * 100

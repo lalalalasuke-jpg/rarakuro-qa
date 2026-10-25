@@ -32,6 +32,16 @@ var matched := false
 var halloween := true
 
 
+# 仕様メモの絵柄一覧用：表向きで押せないカードを1枚作る
+static func make_icon(index: int, icon_size: float) -> Control:
+	var card: MemoryCard = load("res://scenes/titles/memory_match/card.tscn").instantiate()
+	card.custom_minimum_size = Vector2(icon_size, icon_size)
+	card.symbol_index = index
+	card.face_up = true
+	card.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	return card
+
+
 func flip_up() -> void:
 	face_up = true
 	queue_redraw()

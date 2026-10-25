@@ -17,16 +17,35 @@ func submit(main, i: int, overrides := {}) -> void:
 func _run() -> void:
 	var args := OS.get_cmdline_user_args()
 	var mode: String = args[1] if args.size() > 1 else ""
+	# 「d2_◯◯」は2日目（スイカゲーム）で ◯◯ のモード
+	var day := 2 if mode.begins_with("d2") else 1
+	mode = mode.trim_prefix("d2").trim_prefix("_")
+	OfficeMain.next_day = day
 	var main = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
 	await create_timer(0.3).timeout
-	main.setup_bugs(["MM-HW-001", "MM-HW-002", "MM-HW-003"])  # 本番はランダム。スクショは固定
+	# 本番はランダム。スクショは固定
+	main.setup_bugs(["MM-HW-001", "MM-HW-002", "MM-HW-003"] if day == 1 else ["SK-12", "SK-04", "SK-07"])
 	match mode:
+		"play":  # スイカゲームを少し自動で遊んだところ
+			for x in [200, 330, 470, 260, 400, 520, 300, 440]:
+				main.game.aim_x = x
+				await create_timer(0.1).timeout
+				main.game._drop()
+				await create_timer(main.game.COOLDOWN + 0.1).timeout
+			await create_timer(1.0).timeout
+		"gameover":
+			main.game.score = 820
+			main.game._do_game_over()
 		"faceup":
 			for c in main.game.grid.get_children():
 				c.flip_up()
 		"memo":
 			main.memo.show_spec(main.spec)
+		"memo_end":  # 仕様メモを一番下までスクロールしたところ
+			main.memo.show_spec(main.spec)
+			await create_timer(0.3).timeout
+			main.memo.scroll.scroll_vertical = 99999
 		"report":  # 報告書の1ページ目（どこで）
 			main.report_button.emit_signal("pressed")
 		"confirm":  # 報告書の確認ページ

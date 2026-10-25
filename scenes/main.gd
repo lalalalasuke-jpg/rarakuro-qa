@@ -1,8 +1,10 @@
+class_name OfficeMain
 extends Node2D
 
-# 1日目の試作：オフィスの画面。
-# 上＝ヘッダーとチャット、真ん中＝モニター（作中タイトルが動く）、下＝机（仕様メモ・報告書・異常なし）。
-# その日の担当は data/day1.json、仕様メモの中身は data/spec_*.json、バグは data/bugs.json。
+# オフィスの画面（1日ぶん）。
+# 上＝ヘッダーとチャット、真ん中＝モニター（その日の作中タイトルが動く）、下＝机（仕様メモ・報告書・異常なし）。
+# その日の担当は data/dayN.json（作中タイトルのシーン・仕様メモ・報告書・バグ候補）、バグは data/bugs.json。
+# 作中タイトルは start(enabled_bugs) と bug_checked(id, occurred) シグナルを持っていればどれでもはめ込める。
 # 日本語は fonts/NotoSansJP-Subset.ttf（project.godot でテーマの標準フォントに設定）で表示できる。
 #
 # 1日の流れ：朝・昼・夕の3ターン。1ターン＝テストして報告を1つ出す（または「異常なし」）まで。
@@ -12,8 +14,18 @@ extends Node2D
 # 最後の修正が届いたら「終業前」ターンで修正確認をして、1日の結果へ。
 
 const BUGS_PATH := "res://data/bugs.json"
-const DAY_PATH := "res://data/day1.json"
+const DAY_PATH := "res://data/day%d.json"
+## 作ってある最後の日
+const LAST_DAY := 2
+## どこまで進んだかの保存先（次に開いたときはこの日から）
+const PROGRESS_PATH := "user://progress.json"
 const TURNS := ["朝", "昼", "夕"]
+## モニターの中に作中タイトルを置く位置と大きさ
+const SCREEN_POS := Vector2(20, 20)
+const SCREEN_SCALE := 0.8
+
+## 次に読み込む日（「次の日へ」や DEV の日選びで決める。0 なら保存された日）
+static var next_day := 0
 ## 開発さんの返事のあと、リーダーが話し出すまでの間（秒）
 const LEADER_DELAY := 1.8
 
@@ -24,8 +36,10 @@ const CHAT_VERIFIED_LAST := "全部直ってるね！今日はこれで終わり
 const LEADER := {"name": "リーダー", "initial": "リ", "color": Color(0.35, 0.55, 0.85)}
 const DEV := {"name": "開発さん", "initial": "開", "color": Color(0.3, 0.65, 0.45)}
 
+var day_no := 1
 var day: Dictionary
 var spec: Dictionary
+# その日のタイトルのバグ候補（data/bugs.json のうち day.bug_pool にあるもの）
 var bugs: Array = []
 # その日に仕込まれているバグのデータ
 var day_bugs: Array = []
@@ -50,8 +64,10 @@ var closing := false
 # 遅れて出すチャットが古くなっていないかの見分け用
 var chat_serial := 0
 
-@onready var game: MemoryMatch = $HUD/Monitor/MemoryMatch
+# その日の作中タイトル（data/dayN.json の title_scene から作る）
+var game: Control
 @onready var monitor: Control = $HUD/Monitor
+@onready var dev_days: HBoxContainer = $HUD/DevPanel/Days
 @onready var day_label: Label = $HUD/Header/DayLabel
 @onready var avatar: Panel = $HUD/Chat/Avatar
 @onready var avatar_initial: Label = $HUD/Chat/Avatar/Initial
@@ -73,14 +89,20 @@ var toast: PanelContainer
 
 
 func _ready() -> void:
-	day = _load_json(DAY_PATH)
+	day_no = next_day if next_day > 0 else load_progress()
+	next_day = 0
+	day = _load_json(DAY_PATH % day_no)
 	spec = _load_json(day.spec)
-	bugs = _load_json(BUGS_PATH).bugs
+	bugs = _load_json(BUGS_PATH).bugs.filter(func(b): return day.bug_pool.has(b.id))
 	report_form_data = _load_json(day.report)
+
+	game = load(day.title_scene).instantiate()
+	game.position = SCREEN_POS
+	game.scale = Vector2(SCREEN_SCALE, SCREEN_SCALE)
+	monitor.add_child(game)
+	game.bug_checked.connect(_on_bug_checked)
 	# その日のバグは候補の中から毎回ランダムに選ぶ（遊ぶたびに違うバグが出る）
-	var pool: Array = day.bug_pool.duplicate()
-	pool.shuffle()
-	setup_bugs(pool.slice(0, day.pick))
+	setup_bugs(pick_bugs(bugs, day.pick))
 
 	memo_button.pressed.connect(func(): memo.show_spec(spec))
 	report_button.pressed.connect(func():
@@ -88,8 +110,8 @@ func _ready() -> void:
 	report_form.submitted.connect(_on_report_submitted)
 	no_bug_button.pressed.connect(_on_no_bug_pressed)
 	reboot_button.pressed.connect(_restart)
-	day_result.retry_pressed.connect(func(): get_tree().reload_current_scene())
-	game.bug_checked.connect(_on_bug_checked)
+	day_result.retry_pressed.connect(func(): go_to_day(day_no))
+	day_result.next_day_pressed.connect(func(): go_to_day(day_no + 1))
 	_style_desk_disabled()
 	_build_toast()
 
@@ -97,6 +119,45 @@ func _ready() -> void:
 	dev_button.pressed.connect(func(): dev_panel.visible = not dev_panel.visible)
 	restart_button.pressed.connect(_restart)
 	_start_turn()
+
+
+# 候補からランダムに count 個選ぶ。同じ group のバグ（同じ場所のバグ）は同じ日に重ならない
+static func pick_bugs(candidates: Array, count: int) -> Array:
+	var pool := candidates.duplicate()
+	pool.shuffle()
+	var picked: Array = []
+	var groups: Array = []
+	for b in pool:
+		if picked.size() >= count:
+			break
+		var g: String = b.get("group", "")
+		if g != "" and groups.has(g):
+			continue
+		picked.append(b.id)
+		if g != "":
+			groups.append(g)
+	return picked
+
+
+# 別の日を読み込み直す（進んだ日は保存して、次に開いたときもその日から）
+func go_to_day(n: int) -> void:
+	n = clampi(n, 1, LAST_DAY)
+	save_progress(n)
+	next_day = n
+	get_tree().reload_current_scene()
+
+
+static func load_progress() -> int:
+	if not FileAccess.file_exists(PROGRESS_PATH):
+		return 1
+	var data = JSON.parse_string(FileAccess.get_file_as_string(PROGRESS_PATH))
+	return clampi(int(data.get("day", 1)), 1, LAST_DAY) if data is Dictionary else 1
+
+
+static func save_progress(n: int) -> void:
+	var f := FileAccess.open(PROGRESS_PATH, FileAccess.WRITE)
+	if f:
+		f.store_string(JSON.stringify({"day": n}))
 
 
 func _load_json(path: String) -> Dictionary:
@@ -166,7 +227,7 @@ func _end_turn() -> void:
 
 func _finish_day() -> void:
 	var overtime := maxi(0, turn - TURNS.size() + 1)
-	day_result.show_result(day.day, reports, day_bugs, fixed, verified, overtime)
+	day_result.show_result(day_no, reports, day_bugs, fixed, verified, overtime, day_no < LAST_DAY)
 
 
 # 修正確認中・終業前は報告書と異常なしを押せない
@@ -299,6 +360,15 @@ func _build_dev_switches() -> void:
 		b.toggled.connect(_on_switch_toggled.bind(id, b))
 		switches.add_child(b)
 	_sync_dev_switches()
+	# 日を選ぶボタン（その日の最初から）
+	for n in range(1, LAST_DAY + 1):
+		var d := Button.new()
+		d.text = "%d日目" % n
+		d.custom_minimum_size = Vector2(120, 48)
+		d.add_theme_font_size_override("font_size", 20)
+		d.disabled = n == day_no
+		d.pressed.connect(go_to_day.bind(n))
+		dev_days.add_child(d)
 
 
 func _sync_dev_switches() -> void:
@@ -318,7 +388,7 @@ func _on_switch_toggled(on: bool, id: String, b: Button) -> void:
 
 
 func _update_switch_text(b: Button, id: String, on: bool) -> void:
-	b.text = "%s %s" % [id.trim_prefix("MM-HW-"), "ON" if on else "OFF"]
+	b.text = "%s %s" % [id.get_slice("-", id.get_slice_count("-") - 1), "ON" if on else "OFF"]
 
 
 # 開発用：直近の判定を DEV パネルに出す

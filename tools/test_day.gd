@@ -18,6 +18,7 @@ func _initialize() -> void:
 
 # テストではその日のバグを 001〜003 に固定する（本番はランダム）
 func new_main() -> Node:
+	OfficeMain.next_day = 1
 	var main = load("res://scenes/main.tscn").instantiate()
 	root.add_child(main)
 	await process_frame
@@ -122,6 +123,73 @@ func _run() -> void:
 	main._on_report_submitted(main.bugs[3].report)
 	check(main.day_label.text == "1日目　朝" and main.chat_text.text.contains("確認できてない"), "1日目に起きないバグを報告 → 止められる")
 	main.queue_free()
+
+	# --- 1日目の結果から2日目へ ---
+	main = await new_main()
+	main._on_no_bug_pressed(); main._on_no_bug_pressed(); main._on_no_bug_pressed(); main._on_no_bug_pressed()
+	check(main.day_result.next_button.text == "2日目へ" and not main.day_result.next_button.disabled, "1日目の結果に「2日目へ」")
+	main.queue_free()
+
+	# --- 2日目：スイカゲーム ---
+	OfficeMain.next_day = 2
+	main = load("res://scenes/main.tscn").instantiate()
+	root.add_child(main)
+	await process_frame
+	check(main.day_no == 2 and main.game is SuikaTitle, "2日目の担当はスイカゲーム")
+	check(main.bugs.size() == 14 and main.bugs.all(func(b): return b.id.begins_with("SK-")), "バグ候補はスイカの14個だけ")
+	check(main.day_label.text == "2日目　朝" and main.chat_text.text.contains("スイカゲーム"), "ヘッダーとリーダーのチャット")
+	check(main.enabled.size() == 3, "ランダムで3つ: %s" % str(main.enabled))
+
+	# 同じ group（同じ場所）のバグは重ならない
+	var overlap := 0
+	for i in 200:
+		var ids := OfficeMain.pick_bugs(main.bugs, 3)
+		var groups := {}
+		for id in ids:
+			var g: String = main._bug(id).get("group", "")
+			if g != "":
+				if groups.has(g):
+					overlap += 1
+				groups[g] = true
+	check(overlap == 0, "200回選んでも、バナー・どんぐりのバグは同じ日に重ならない")
+
+	# モニターの中の小さな画面（SubViewport）にタップが届く
+	var pos: Vector2 = main.game.touch_area.get_global_rect().get_center()
+	for pressed in [true, false]:
+		var e := InputEventMouseButton.new()
+		e.button_index = MOUSE_BUTTON_LEFT
+		e.pressed = pressed
+		e.position = pos
+		e.global_position = pos
+		root.push_input(e)
+		await process_frame
+	# headless（画面なし）ではタップの処理が動かないので、ウィンドウありで実行した時だけ確かめる
+	if DisplayServer.get_name() == "headless":
+		print("SKIP モニターの中のスイカゲームにタップが届く（ウィンドウありで実行すると確認できる）")
+	else:
+		check(main.game.touched, "モニターの中のスイカゲームにタップが届く")
+
+	# 報告 → 返事 → 修正確認 → 終業前 → 結果
+	main.setup_bugs(["SK-01", "SK-04", "SK-07"])
+	var sk := func(id): return main.bugs.filter(func(b): return b.id == id)[0]
+	for id in ["SK-01", "SK-04", "SK-07"]:
+		main.game.bug_checked.emit(id, true)
+		var r: Dictionary = sk.call(id).report.duplicate()
+		if r.severity is Array:
+			r.severity = r.severity[0]
+		main._on_report_submitted(r)
+		check(main.chat_text.text.contains("修正しました"), "%s: 修正しました" % id)
+		main.game.bug_checked.emit(id, false)
+	check(main.day_label.text == "2日目　終業前", "3つとも直って終業前")
+	await create_timer(main.LEADER_DELAY + 0.3).timeout
+	check(main.day_result.visible and DayResult.total_score(main.reports, 0) == 300, "2日目の結果 300点")
+	check(main.day_result.next_button.disabled and main.day_result.next_button.text == "3日目へ（準備中）", "2日目の結果は「3日目へ（準備中）」")
+	main.queue_free()
+
+	# 進んだ日の保存
+	OfficeMain.save_progress(2)
+	check(OfficeMain.load_progress() == 2, "進んだ日が保存される")
+	OfficeMain.save_progress(1)
 
 	print("RESULT: %s" % ("ALL OK" if failed == 0 else "%d FAILED" % failed))
 	quit(1 if failed else 0)

@@ -25,20 +25,32 @@ func _run() -> void:
 	var form: Dictionary = load_json("res://data/report_mm_halloween.json")
 	var all_ids := bugs.map(func(b): return b.id)
 
-	# --- 選択肢：全バグ候補の正解＋ダミー ---
+	# --- 選択肢：そのタイトルの全バグ候補の正解＋ダミー（タイトルごと） ---
+	for form_path in ["res://data/report_mm_halloween.json", "res://data/report_sk_autumn.json"]:
+		var fm: Dictionary = load_json(form_path)
+		var title_bugs := bugs.filter(func(b): return b.title_ver == fm.title_ver)
+		check(title_bugs.size() >= 7, "%s: バグ候補 %d 個" % [fm.title_ver, title_bugs.size()])
+		var fs := ReportForm.build_fields(fm, bugs)
+		for b in title_bugs:
+			for f in fs:
+				var answers = b.report[f.key]
+				if answers is String:
+					answers = [answers]
+				for a in answers:
+					check(f.options.has(a), "%s の正解「%s」が選択肢(%s)にある" % [b.id, a, f.key])
+		for f in fs:
+			var unique := {}
+			for o in f.options:
+				unique[o] = true
+			check(unique.size() == f.options.size() and f.options.size() >= 3, "%s %s: 選択肢 %d 個・重複なし" % [fm.title_ver, f.key, f.options.size()])
+		# 「実際の動き」でバグを特定するので、タイトルの中で重なってはいけない
+		var actuals := {}
+		for b in title_bugs:
+			actuals[b.report.actual] = true
+		check(actuals.size() == title_bugs.size(), "%s: 実際の動きの正解がバグごとに違う" % fm.title_ver)
 	var fields := ReportForm.build_fields(form, bugs)
-	for b in bugs:
-		for f in fields:
-			var answers = b.report[f.key]
-			if answers is String:
-				answers = [answers]
-			for a in answers:
-				check(f.options.has(a), "%s の正解「%s」が選択肢(%s)にある" % [b.id, a, f.key])
-	for f in fields:
-		var unique := {}
-		for o in f.options:
-			unique[o] = true
-		check(unique.size() == f.options.size() and f.options.size() >= 3, "%s: 選択肢 %d 個・重複なし" % [f.key, f.options.size()])
+	bugs = bugs.filter(func(b): return b.title_ver == form.title_ver)
+	all_ids = bugs.map(func(b): return b.id)
 
 	# --- 報告書のページ送り ---
 	var rf: ReportForm = load("res://scenes/office/report_form.tscn").instantiate()

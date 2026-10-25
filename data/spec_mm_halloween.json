@@ -14,5 +14,6 @@
     "クリアで「かぼちゃメダル」×3"
   ],
   "symbols_note": "カードの絵柄はハロウィン仕様（8種類×2枚）",
+  "icon_script": "res://scenes/titles/memory_match/card.gd",
   "symbols": ["かぼちゃ", "おばけ", "コウモリ", "月", "魔女の帽子", "キャンディ", "ドクロ", "黒猫"]
 }
