@@ -50,26 +50,44 @@ func _ready() -> void:
 	body.add_theme_constant_override("separation", 6)
 	scroll.add_child(body)
 
-	var retry := Button.new()
-	retry.text = "もう一度1日目をやる"
-	retry.custom_minimum_size = Vector2(0, 72)
-	retry.add_theme_font_size_override("font_size", 28)
-	var st := StyleBoxFlat.new()
-	st.bg_color = Color(0.17, 0.22, 0.33)
-	st.set_corner_radius_all(8)
-	for state in ["normal", "hover", "pressed", "focus"]:
-		retry.add_theme_stylebox_override(state, st)
+	var buttons := HBoxContainer.new()
+	buttons.add_theme_constant_override("separation", 16)
+	outer.add_child(buttons)
+	var retry := _make_big_button("もう一度1日目", Color(0.17, 0.22, 0.33))
 	retry.pressed.connect(func(): retry_pressed.emit())
-	outer.add_child(retry)
+	buttons.add_child(retry)
+	# 2日目はまだ無いので押せないボタンだけ置いておく
+	var next_day := _make_big_button("2日目へ（準備中）", ACCENT)
+	next_day.disabled = true
+	buttons.add_child(next_day)
 
 
-# day_no: 何日目、reports: [{turn, report, judge}]、bugs: その日のバグデータ、fixed: 直ったバグ ID、overtime: 残業ターン数
-func show_result(day_no: int, reports: Array, bugs: Array, fixed: Array, overtime: int) -> void:
+func _make_big_button(text: String, color: Color) -> Button:
+	var b := Button.new()
+	b.text = text
+	b.custom_minimum_size = Vector2(0, 72)
+	b.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	b.add_theme_font_size_override("font_size", 26)
+	var st := StyleBoxFlat.new()
+	st.bg_color = color
+	st.set_corner_radius_all(8)
+	var dis := st.duplicate()
+	dis.bg_color = Color(color, 0.35)
+	for state in ["normal", "hover", "pressed", "focus"]:
+		b.add_theme_stylebox_override(state, st)
+	b.add_theme_stylebox_override("disabled", dis)
+	return b
+
+
+# day_no: 何日目、reports: [{turn, report, judge}]、bugs: その日のバグデータ、fixed: 直ったバグ ID、
+# verified: 修正確認が済んだバグ ID、overtime: 残業ターン数
+func show_result(day_no: int, reports: Array, bugs: Array, fixed: Array, verified: Array, overtime: int) -> void:
 	for child in body.get_children():
 		child.queue_free()
 
 	_label("%d日目の結果" % day_no, 34, INK)
 	_label("見つけて直ったバグ　%d / %d" % [fixed.size(), bugs.size()], 28, GOOD if fixed.size() == bugs.size() else ACCENT)
+	_label("修正確認　%d / %d" % [verified.size(), fixed.size()], 24, GOOD if verified.size() == fixed.size() else ACCENT)
 	if overtime == 0:
 		_label("定時で完了！", 24, GOOD)
 	else:

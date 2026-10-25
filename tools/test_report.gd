@@ -1,6 +1,6 @@
 extends SceneTree
 
-# 報告書まわりの確認: バグが画面に出た時の bug_seen、ReportJudge の判定、選択肢と正解の文言のズレ。
+# 報告書まわりの確認: 選択肢の作り方、bug_checked、ReportJudge の判定、報告書のページ送り。
 # 実行: godot --headless --path . --script res://tools/test_report.gd
 
 var failed := 0
@@ -22,36 +22,64 @@ func _initialize() -> void:
 
 func _run() -> void:
 	var bugs: Array = load_json("res://data/bugs.json").bugs
-	var options: Dictionary = load_json("res://data/report_mm_halloween.json")
+	var form: Dictionary = load_json("res://data/report_mm_halloween.json")
 	var all_ids := bugs.map(func(b): return b.id)
 
-	# --- 正解の文言が選択肢に必ずある（データの書き間違い防止） ---
+	# --- 選択肢：全バグ候補の正解＋ダミー ---
+	var fields := ReportForm.build_fields(form, bugs)
 	for b in bugs:
-		for field in options.fields:
-			check(field.options.has(b.report[field.key]), "%s の正解「%s」が選択肢(%s)にある" % [b.id, b.report[field.key], field.key])
+		for f in fields:
+			check(f.options.has(b.report[f.key]), "%s の正解「%s」が選択肢(%s)にある" % [b.id, b.report[f.key], f.key])
+	for f in fields:
+		var unique := {}
+		for o in f.options:
+			unique[o] = true
+		check(unique.size() == f.options.size() and f.options.size() >= 3, "%s: 選択肢 %d 個・重複なし" % [f.key, f.options.size()])
 
-	# --- bug_seen ---
+	# --- 報告書のページ送り ---
+	var rf: ReportForm = load("res://scenes/office/report_form.tscn").instantiate()
+	root.add_child(rf)
+	rf.open(form, bugs, "test")
+	check(rf.page == 0 and rf.next_button.disabled, "1ページ目は選ぶまで「次へ」が押せない")
+	check(rf.options_box.get_child_count() == fields[0].options.size(), "1ページ目には「どこで」の選択肢だけ")
+	var got := [{}]
+	rf.submitted.connect(func(r): got[0] = r)
+	for i in fields.size():
+		rf.selections[fields[i].key] = fields[i].options[0]
+		rf._go(rf.page)
+		check(not rf.next_button.disabled, "%d ページ目: 選んだら「次へ」" % (i + 1))
+		rf._on_next()
+	check(rf.page == fields.size() and rf.next_button.text == "提出する", "最後は確認ページ")
+	rf._on_next()
+	check(got[0].size() == fields.size(), "確認ページから提出できる")
+	rf.clear()
+	check(rf.page == 0 and rf.selections.is_empty(), "clear で最初に戻る")
+	rf.queue_free()
+
+	# --- bug_checked ---
 	var game: MemoryMatch = load("res://scenes/titles/memory_match/memory_match.tscn").instantiate()
 	root.add_child(game)
 	var seen := []
-	game.bug_seen.connect(func(id): seen.append(id))
+	game.bug_checked.connect(func(id, occurred): seen.append([id, occurred]))
 	game.start(all_ids)
+	await process_frame
+	check(seen.has(["MM-HW-005", true]), "005: 画面を開くとバナーのバグが見える")
 	var cards := game.grid.get_children().filter(func(c): return not c.is_queued_for_deletion())
-	var normal: MemoryCard = cards.filter(func(c): return not c.halloween)[0]
-	game._on_card_pressed(normal)
-	check(seen.has("MM-HW-001"), "001: 通常絵柄のカードをめくると bug_seen")
-	var others := cards.filter(func(c): return c.halloween and c.symbol_index != cards.filter(func(x): return x.halloween)[0].symbol_index)
-	var first_h = cards.filter(func(x): return x.halloween)[0]
-	game._on_card_pressed(first_h)
-	game._on_card_pressed(others[0])
-	check(seen.has("MM-HW-002"), "002: 3枚目が表になると bug_seen")
-	await create_timer(1.5).timeout
+	var candy: MemoryCard = cards.filter(func(c): return c.symbol_index == MemoryMatch.BUG_001_SYMBOL)[0]
+	game._on_card_pressed(candy)
+	check(seen.has(["MM-HW-001", true]), "001: キャンディをめくると見える")
 	game._on_clear()
-	check(seen.has("MM-HW-003"), "003: 報酬×1のクリア画面で bug_seen")
+	check(seen.has(["MM-HW-003", true]), "003: 報酬×1のクリア画面で見える")
+	await create_timer(1.0).timeout
 	seen.clear()
 	game.start([])
+	await process_frame
+	cards = game.grid.get_children().filter(func(c): return not c.is_queued_for_deletion())
+	candy = cards.filter(func(c): return c.symbol_index == MemoryMatch.BUG_001_SYMBOL)[0]
+	game._on_card_pressed(candy)
 	game._on_clear()
-	check(seen.is_empty(), "バグOFFなら bug_seen は出ない")
+	check(seen.has(["MM-HW-001", false]) and seen.has(["MM-HW-003", false]) and seen.has(["MM-HW-005", false]),
+		"バグOFFで同じ操作 → 出なかった（修正確認に使う）")
 	game.queue_free()
 
 	# --- ReportJudge ---
@@ -69,12 +97,12 @@ func _run() -> void:
 	check(j.result == ReportJudge.CANNOT_REPRODUCE, "再現手順が違う → 再現しません")
 
 	var not_bug := perfect.duplicate()
-	not_bug.actual = "違う絵柄なのにペアになる"
+	not_bug.actual = "カードがめくれない"
 	j = ReportJudge.judge(not_bug, bugs, all_ids, ["MM-HW-002"], [])
 	check(j.result == ReportJudge.BY_DESIGN, "どのバグとも合わない → 仕様です")
 
 	j = ReportJudge.judge(perfect, bugs, ["MM-HW-001"], [], [])
-	check(j.result == ReportJudge.NOT_SEEN, "修正済み（今は出ない）バグ → 見ていない扱いで止める")
+	check(j.result == ReportJudge.NOT_SEEN, "修正済み・その日に起きないバグ → 見ていない扱いで止める")
 
 	j = ReportJudge.judge(perfect, bugs, all_ids, ["MM-HW-002"], ["MM-HW-002"])
 	check(j.result == ReportJudge.DUPLICATE, "報告済み → 重複です")

@@ -7,13 +7,20 @@ extends Node2D
 #
 # 1日の流れ：朝・昼・夕の3ターン。1ターン＝テストして報告を1つ出す（または「異常なし」）まで。
 # 出した報告の返事は次のターンの始めに開発さんから届き、「修正します」のバグはそのターンから直っている。
+# 直ったバグは、まず同じ操作をしてバグが出ないことを確かめる（修正確認）。確認が終わるまで次の報告は出せない。
 # 夕方までに全部直らなければ残業ターンが続く（残業中は「今日はあがる」で切り上げられる）。
+# 最後の修正が届いたら「終業前」ターンで修正確認をして、1日の結果へ。
 
 const BUGS_PATH := "res://data/bugs.json"
 const DAY_PATH := "res://data/day1.json"
 const TURNS := ["朝", "昼", "夕"]
+## 開発さんの返事のあと、リーダーが話し出すまでの間（秒）
+const LEADER_DELAY := 1.8
 
 const CHAT_NOT_SEEN := "その現象、このターンではまだ画面で確認できてないみたい。実際に起きるのを見てから報告してね。"
+const CHAT_VERIFY := "まずは直ってるか確認しよっか。「%s」をやってみて、バグが出ないか見てみてね。"
+const CHAT_VERIFIED := "ちゃんと直ってるね！じゃあ、ほかに不具合がないか探してみよう。"
+const CHAT_VERIFIED_LAST := "全部直ってるね！今日はこれで終わり、おつかれさま。"
 const LEADER := {"name": "リーダー", "initial": "リ", "color": Color(0.35, 0.55, 0.85)}
 const DEV := {"name": "開発さん", "initial": "開", "color": Color(0.3, 0.65, 0.45)}
 
@@ -22,11 +29,14 @@ var spec: Dictionary
 var bugs: Array = []
 # その日に仕込まれているバグのデータ
 var day_bugs: Array = []
-var report_options: Dictionary
+var report_form_data: Dictionary
 # 今仕込まれている（まだ直っていない）バグの ID
 var enabled: Array = []
 # 直ったバグの ID
 var fixed: Array = []
+# 修正確認待ちのバグの ID と、確認が済んだバグの ID
+var verifying: Array = []
+var verified: Array = []
 # このターンにプレイヤーが画面で見たバグの ID
 var observed: Array = []
 # 提出した報告 [{turn, report, judge}]
@@ -35,8 +45,13 @@ var reports: Array = []
 var pending: Dictionary = {}
 # 0=朝 1=昼 2=夕 3以上=残業
 var turn := 0
+# 「終業前」ターン（最後の修正確認）中か
+var closing := false
+# 遅れて出すチャットが古くなっていないかの見分け用
+var chat_serial := 0
 
 @onready var game: MemoryMatch = $HUD/Monitor/MemoryMatch
+@onready var monitor: Control = $HUD/Monitor
 @onready var day_label: Label = $HUD/Header/DayLabel
 @onready var avatar: Panel = $HUD/Chat/Avatar
 @onready var avatar_initial: Label = $HUD/Chat/Avatar/Initial
@@ -50,9 +65,10 @@ var turn := 0
 @onready var day_result: DayResult = $HUD/DayResult
 @onready var dev_button: Button = $HUD/Header/DevButton
 @onready var dev_panel: Control = $HUD/DevPanel
-@onready var switches: HBoxContainer = $HUD/DevPanel/Switches
+@onready var switches: HFlowContainer = $HUD/DevPanel/Switches
 @onready var restart_button: Button = $HUD/DevPanel/Restart
 @onready var dev_judge_label: Label = $HUD/DevPanel/LastJudge
+var toast: PanelContainer
 
 
 func _ready() -> void:
@@ -60,18 +76,18 @@ func _ready() -> void:
 	spec = _load_json(day.spec)
 	bugs = _load_json(BUGS_PATH).bugs
 	day_bugs = bugs.filter(func(b): return day.bugs.has(b.id))
-	report_options = _load_json(day.report)
+	report_form_data = _load_json(day.report)
 	enabled = day.bugs.duplicate()
 
 	memo_button.pressed.connect(func(): memo.show_spec(spec))
 	report_button.pressed.connect(func():
-		report_form.open(report_options, "%s %s %s" % [spec.title, spec.event, spec.version]))
+		report_form.open(report_form_data, bugs, "%s %s %s" % [spec.title, spec.event, spec.version]))
 	report_form.submitted.connect(_on_report_submitted)
 	no_bug_button.pressed.connect(_on_no_bug_pressed)
 	day_result.retry_pressed.connect(func(): get_tree().reload_current_scene())
-	game.bug_seen.connect(func(id):
-		if not observed.has(id):
-			observed.append(id))
+	game.bug_checked.connect(_on_bug_checked)
+	_style_desk_disabled()
+	_build_toast()
 
 	_build_dev_switches()
 	dev_button.pressed.connect(func(): dev_panel.visible = not dev_panel.visible)
@@ -88,6 +104,8 @@ func _load_json(path: String) -> Dictionary:
 
 
 func _turn_name() -> String:
+	if closing:
+		return "終業前"
 	return TURNS[turn] if turn < TURNS.size() else "残業%d" % (turn - TURNS.size() + 1)
 
 
@@ -99,32 +117,67 @@ func _is_overtime() -> bool:
 func _start_turn() -> void:
 	observed.clear()
 	day_label.text = "%d日目　%s" % [day.day, _turn_name()]
-	no_bug_button.text = "今日はあがる" if _is_overtime() else "異常なし"
 	if not pending.is_empty():
 		_say(DEV, ReportJudge.dev_reply(pending.report, pending.judge))
+		if pending.judge.result == ReportJudge.FIX:
+			verifying.append(pending.judge.bug_id)
+			_say_later(LEADER, CHAT_VERIFY % pending.report.steps)
 		pending = {}
 	elif turn == 0:
 		_say(LEADER, day.chat)
 	else:
 		_say(LEADER, day.turn_chats["残業" if _is_overtime() else TURNS[turn]])
+	_update_desk()
 	_restart()
 
 
-# ターンの終わり：返事待ちの報告が「修正します」なら直す → 全部直ったら1日の終わり、まだなら次のターンへ
+# ターンの終わり：返事待ちの報告が「修正します」なら直す → 全部直ったら終業前、まだなら次のターンへ
 func _end_turn() -> void:
 	if not pending.is_empty() and pending.judge.result == ReportJudge.FIX:
 		enabled.erase(pending.judge.bug_id)
 		fixed.append(pending.judge.bug_id)
 		_sync_dev_switches()
 	if day_bugs.all(func(b): return fixed.has(b.id)):
-		_finish_day()
-		return
-	turn += 1
+		closing = true
+	else:
+		turn += 1
 	_start_turn()
 
 
 func _finish_day() -> void:
-	day_result.show_result(day.day, reports, day_bugs, fixed, maxi(0, turn - TURNS.size() + 1))
+	var overtime := maxi(0, turn - TURNS.size() + 1)
+	day_result.show_result(day.day, reports, day_bugs, fixed, verified, overtime)
+
+
+# 修正確認中・終業前は報告書と異常なしを押せない
+func _update_desk() -> void:
+	var locked := not verifying.is_empty() or closing
+	report_button.disabled = locked
+	no_bug_button.disabled = locked
+	no_bug_button.text = "今日はあがる" if _is_overtime() else "異常なし"
+
+
+func _on_bug_checked(id: String, occurred: bool) -> void:
+	if occurred:
+		if not observed.has(id):
+			observed.append(id)
+	elif verifying.has(id):
+		verifying.erase(id)
+		verified.append(id)
+		_on_fix_verified()
+
+
+func _on_fix_verified() -> void:
+	_show_toast("修正確認完了！")
+	if not verifying.is_empty():
+		return
+	if closing:
+		_say(LEADER, CHAT_VERIFIED_LAST)
+		await get_tree().create_timer(LEADER_DELAY).timeout
+		_finish_day()
+	else:
+		_say(LEADER, CHAT_VERIFIED)
+		_update_desk()
 
 
 func _on_report_submitted(report: Dictionary) -> void:
@@ -150,12 +203,62 @@ func _on_no_bug_pressed() -> void:
 
 
 func _say(who: Dictionary, text: String) -> void:
+	chat_serial += 1
 	avatar_initial.text = who.initial
 	var style: StyleBoxFlat = avatar.get_theme_stylebox("panel").duplicate()
 	style.bg_color = who.color
 	avatar.add_theme_stylebox_override("panel", style)
 	chat_from.text = who.name
 	chat_text.text = text
+
+
+# 少し間をあけてから話す（その間に別のメッセージが出ていたら出さない）
+func _say_later(who: Dictionary, text: String) -> void:
+	var serial := chat_serial
+	await get_tree().create_timer(LEADER_DELAY).timeout
+	if serial == chat_serial:
+		_say(who, text)
+
+
+func _style_desk_disabled() -> void:
+	var st := StyleBoxFlat.new()
+	st.bg_color = Color(0.8, 0.76, 0.7)
+	st.set_corner_radius_all(10)
+	for b in [report_button, no_bug_button]:
+		b.add_theme_stylebox_override("disabled", st)
+		b.add_theme_color_override("font_disabled_color", Color(0.5, 0.47, 0.44))
+
+
+# モニターの上にぽんっと出る通知
+func _build_toast() -> void:
+	toast = PanelContainer.new()
+	var st := StyleBoxFlat.new()
+	st.bg_color = Color(0.15, 0.55, 0.3)
+	st.set_corner_radius_all(14)
+	st.content_margin_left = 36
+	st.content_margin_right = 36
+	st.content_margin_top = 18
+	st.content_margin_bottom = 18
+	toast.add_theme_stylebox_override("panel", st)
+	toast.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var l := Label.new()
+	l.add_theme_font_size_override("font_size", 40)
+	toast.add_child(l)
+	toast.visible = false
+	$HUD.add_child(toast)
+
+
+func _show_toast(text: String) -> void:
+	var l: Label = toast.get_child(0)
+	l.text = text
+	toast.reset_size()
+	toast.position = monitor.position + (monitor.size - toast.size) * 0.5
+	toast.modulate.a = 1.0
+	toast.visible = true
+	var tw := create_tween()
+	tw.tween_interval(1.2)
+	tw.tween_property(toast, "modulate:a", 0.0, 0.4)
+	tw.tween_callback(func(): toast.visible = false)
 
 
 func _restart() -> void:
@@ -168,8 +271,8 @@ func _build_dev_switches() -> void:
 		var id: String = bug.id
 		var b := Button.new()
 		b.toggle_mode = true
-		b.custom_minimum_size = Vector2(200, 64)
-		b.add_theme_font_size_override("font_size", 22)
+		b.custom_minimum_size = Vector2(150, 56)
+		b.add_theme_font_size_override("font_size", 20)
 		b.set_meta("bug_id", id)
 		b.toggled.connect(_on_switch_toggled.bind(id, b))
 		switches.add_child(b)
