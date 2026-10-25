@@ -20,13 +20,14 @@ const CHECK_KEYS := ["where", "steps", "target", "expected"]
 static func judge(report: Dictionary, bugs: Array, enabled: Array, observed: Array, reported: Array) -> Dictionary:
 	var bug: Dictionary = {}
 	for b in bugs:
-		if enabled.has(b.id) and b.report.actual == report.get("actual"):
+		if b.report.actual == report.get("actual"):
 			bug = b
 			break
-	if bug.is_empty():
-		return {"result": BY_DESIGN, "bug_id": ""}
-	if not observed.has(bug.id):
+	# 修正済み・仕込んでいないバグは画面に出ないので、ここで「見ていない」になる
+	if not bug.is_empty() and not observed.has(bug.id):
 		return {"result": NOT_SEEN, "bug_id": bug.id}
+	if bug.is_empty() or not enabled.has(bug.id):
+		return {"result": BY_DESIGN, "bug_id": ""}
 	if reported.has(bug.id):
 		return {"result": DUPLICATE, "bug_id": bug.id}
 
@@ -52,3 +53,14 @@ static func result_text(result: String) -> String:
 		DUPLICATE: return "重複です"
 		NOT_SEEN: return "（未確認）"
 	return result
+
+
+# 開発さんからの返事（次のターンの始めにチャットで届く）
+static func dev_reply(report: Dictionary, judge: Dictionary) -> String:
+	var subject := "「%s」の件" % report.get("actual", "")
+	match judge.result:
+		FIX: return "%s、修正しました！修正版をもう入れてあります。" % subject
+		CANNOT_REPRODUCE: return "%s、書いてある手順だと再現しませんでした…。手順をもう一度確認してもらえますか？" % subject
+		BY_DESIGN: return "%s、確認しましたが仕様どおりの動きです。" % subject
+		DUPLICATE: return "%sは、もう報告をもらっています。" % subject
+	return ""

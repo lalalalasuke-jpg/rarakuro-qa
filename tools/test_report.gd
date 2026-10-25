@@ -73,8 +73,8 @@ func _run() -> void:
 	j = ReportJudge.judge(not_bug, bugs, all_ids, ["MM-HW-002"], [])
 	check(j.result == ReportJudge.BY_DESIGN, "どのバグとも合わない → 仕様です")
 
-	j = ReportJudge.judge(perfect, bugs, ["MM-HW-001"], ["MM-HW-002"], [])
-	check(j.result == ReportJudge.BY_DESIGN, "仕込んでいないバグ → 仕様です")
+	j = ReportJudge.judge(perfect, bugs, ["MM-HW-001"], [], [])
+	check(j.result == ReportJudge.NOT_SEEN, "修正済み（今は出ない）バグ → 見ていない扱いで止める")
 
 	j = ReportJudge.judge(perfect, bugs, all_ids, ["MM-HW-002"], ["MM-HW-002"])
 	check(j.result == ReportJudge.DUPLICATE, "報告済み → 重複です")

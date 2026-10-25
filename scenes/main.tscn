@@ -1,9 +1,10 @@
-[gd_scene load_steps=8 format=3]
+[gd_scene load_steps=9 format=3]
 
 [ext_resource type="Script" path="res://scenes/main.gd" id="1"]
 [ext_resource type="PackedScene" path="res://scenes/titles/memory_match/memory_match.tscn" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/office/spec_memo.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/office/report_form.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/office/day_result.tscn" id="5"]
 
 [sub_resource type="StyleBoxFlat" id="bubble"]
 bg_color = Color(1, 1, 1, 1)
@@ -160,15 +161,15 @@ mouse_filter = 2
 color = Color(0.25, 0.25, 0.28, 1)
 
 [node name="MemoButton" type="Button" parent="HUD/Desk"]
-offset_left = 40.0
+offset_left = 24.0
 offset_top = 48.0
-offset_right = 350.0
+offset_right = 240.0
 offset_bottom = 158.0
 theme_override_colors/font_color = Color(0.15, 0.14, 0.18, 1)
 theme_override_colors/font_hover_color = Color(0.15, 0.14, 0.18, 1)
 theme_override_colors/font_pressed_color = Color(0.15, 0.14, 0.18, 1)
 theme_override_colors/font_focus_color = Color(0.15, 0.14, 0.18, 1)
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 28
 theme_override_styles/normal = SubResource("desk_button")
 theme_override_styles/hover = SubResource("desk_button")
 theme_override_styles/pressed = SubResource("desk_button")
@@ -176,24 +177,42 @@ theme_override_styles/focus = SubResource("desk_button")
 text = "仕様メモ"
 
 [node name="ReportButton" type="Button" parent="HUD/Desk"]
-offset_left = 370.0
+offset_left = 252.0
 offset_top = 48.0
-offset_right = 680.0
+offset_right = 468.0
 offset_bottom = 158.0
 theme_override_colors/font_color = Color(0.15, 0.14, 0.18, 1)
 theme_override_colors/font_hover_color = Color(0.15, 0.14, 0.18, 1)
 theme_override_colors/font_pressed_color = Color(0.15, 0.14, 0.18, 1)
 theme_override_colors/font_focus_color = Color(0.15, 0.14, 0.18, 1)
-theme_override_font_sizes/font_size = 30
+theme_override_font_sizes/font_size = 28
 theme_override_styles/normal = SubResource("desk_button")
 theme_override_styles/hover = SubResource("desk_button")
 theme_override_styles/pressed = SubResource("desk_button")
 theme_override_styles/focus = SubResource("desk_button")
 text = "報告書"
 
+[node name="NoBugButton" type="Button" parent="HUD/Desk"]
+offset_left = 480.0
+offset_top = 48.0
+offset_right = 696.0
+offset_bottom = 158.0
+theme_override_colors/font_color = Color(0.15, 0.14, 0.18, 1)
+theme_override_colors/font_hover_color = Color(0.15, 0.14, 0.18, 1)
+theme_override_colors/font_pressed_color = Color(0.15, 0.14, 0.18, 1)
+theme_override_colors/font_focus_color = Color(0.15, 0.14, 0.18, 1)
+theme_override_font_sizes/font_size = 28
+theme_override_styles/normal = SubResource("desk_button")
+theme_override_styles/hover = SubResource("desk_button")
+theme_override_styles/pressed = SubResource("desk_button")
+theme_override_styles/focus = SubResource("desk_button")
+text = "異常なし"
+
 [node name="SpecMemo" parent="HUD" instance=ExtResource("3")]
 
 [node name="ReportForm" parent="HUD" instance=ExtResource("4")]
+
+[node name="DayResult" parent="HUD" instance=ExtResource("5")]
 
 [node name="DevPanel" type="ColorRect" parent="HUD"]
 visible = false
@@ -234,3 +253,4 @@ offset_bottom = 254.0
 theme_override_colors/font_color = Color(0.85, 0.85, 0.6, 1)
 theme_override_font_sizes/font_size = 18
 text = "直近の判定: なし"
+

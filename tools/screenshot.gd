@@ -1,6 +1,6 @@
 extends SceneTree
 # 見た目確認用: メイン画面を開いてスクショを保存する
-# 使い方: godot --path . --resolution 720x1280 --script res://tools/screenshot.gd -- <出力.png> [faceup|memo|clear]
+# 使い方: godot --path . --resolution 720x1280 --script res://tools/screenshot.gd -- <出力.png> [faceup|memo|report|clear|noon|result]
 func _initialize() -> void:
 	_run.call_deferred()
 func _run() -> void:
@@ -22,6 +22,17 @@ func _run() -> void:
 				g[key].get_buttons()[0].button_pressed = true
 		"clear":
 			main.game._on_clear()
+		"noon":  # 朝に正しい報告を出して、昼に開発さんの返事が届いたところ
+			main.game.bug_seen.emit("MM-HW-002")
+			main._on_report_submitted(main.bugs[1].report)
+		"result":  # 手順違い1件＋残業ありで1日を終えたところ
+			for i in [1, 0, 2, 0]:
+				main.game.bug_seen.emit(main.bugs[i].id)
+				var r: Dictionary = main.bugs[i].report.duplicate()
+				if main.reports.size() == 1:
+					r.steps = "ゆっくり1枚ずつめくる"
+					r.severity = "高"
+				main._on_report_submitted(r)
 	await create_timer(0.3).timeout
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(args[0])
