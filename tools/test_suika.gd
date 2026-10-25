@@ -155,6 +155,20 @@ func _run() -> void:
 	game._do_game_over()
 	check(game.game_over_panel.visible and game.reward_label.text.ends_with("×0") and checked.has(["SK-07", true]), "500点以上でゲームオーバー → 報酬表示とバグ検知")
 
+	# --- 回帰テスト: くっついて止まった果物にも、同じ果物が当たれば合体する（ららすけのテストプレイで発見） ---
+	await fresh(["SK-10"])
+	var stuck := put(1, Vector2(360, 400))
+	stuck.freeze_mode = RigidBody2D.FREEZE_MODE_STATIC
+	stuck.freeze = true
+	put(1, Vector2(362, 250))  # あとから作る＝ID が大きい側からぶつかる
+	await wait(1.5)
+	check(count_rank(1) == 0 and count_rank(2) == 1, "止まった果物＋同じ果物 → 合体する（跳ね続けない）")
+	# ふつうの合体も1回だけ（2つの果物から2回分の合体が起きない）
+	await fresh([])
+	put(0, Vector2(360, 660)); put(0, Vector2(362, 560))
+	await wait(1.0)
+	check(count_rank(1) == 1 and count_rank(0) == 0 and game.score == 20, "さくらんぼ2つ → いちご1つ・20点（二重に合体しない）")
+
 	# --- ゲームオーバーの判定（ラインの上で止まっている） ---
 	await fresh([])
 	var high := put(0, Vector2(360, 60))

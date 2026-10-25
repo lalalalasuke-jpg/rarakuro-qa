@@ -218,10 +218,10 @@ func _on_contact(a: SuikaFruit, other: Node) -> void:
 	if not (other is SuikaFruit):
 		return
 	var b := other as SuikaFruit
+	# A↔B の通知はふつう両方に飛ぶが、先に処理した側が merged を立てるので2回目はここで止まる。
+	# （以前は「ID が小さい方だけ処理」にしていたが、くっついて止まった果物（freeze）は通知を出さないため、
+	#   ID が大きい方からぶつかると誰も合体させず、跳ね続けていた。ららすけのテストプレイで発見）
 	if a.merged or b.merged or a == current_fruit or b == current_fruit:
-		return
-	# A↔B の通知は両方に飛ぶ。ID が小さい方だけが処理して1回に絞る
-	if a.get_instance_id() > b.get_instance_id():
 		return
 	if a.rank == b.rank:
 		if a.rank >= SuikaFruit.MAX_RANK:
