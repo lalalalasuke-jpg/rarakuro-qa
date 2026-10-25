@@ -1,5 +1,5 @@
 {
-  "_comment": "バグのデータ（企画書 docs/design.md の6章・8章）。title_ver ごとに、その日のステージで有効にするバグを選ぶ",
+  "_comment": "バグのデータ（企画書 docs/design.md の6章・8章）。report は報告書の正解（data/report_*.json の選択肢と同じ文言）",
   "bugs": [
     {
       "id": "MM-HW-001",
@@ -11,7 +11,15 @@
       "expected": "全8種類がハロウィン絵柄で表示される",
       "severity": "低",
       "spec_ref": "イベント仕様メモ「カードの絵柄がハロウィン仕様（8種類×2枚）」",
-      "difficulty": "やさしい"
+      "difficulty": "やさしい",
+      "report": {
+        "where": "プレイ中の盤面",
+        "steps": "カードを1枚めくる",
+        "target": "カードの絵柄",
+        "expected": "8種類すべてハロウィン絵柄",
+        "actual": "ハロウィン絵柄ではないカードがある",
+        "severity": "低"
+      }
     },
     {
       "id": "MM-HW-002",
@@ -23,7 +31,15 @@
       "expected": "2枚めくったら判定が終わるまで他のカードは押せない",
       "severity": "中",
       "spec_ref": "ルール「1回にめくれるのは2枚まで」",
-      "difficulty": "ふつう"
+      "difficulty": "ふつう",
+      "report": {
+        "where": "プレイ中の盤面",
+        "steps": "2枚目をめくった直後に、素早く3枚目をタップする",
+        "target": "めくれるカードの枚数",
+        "expected": "1回にめくれるのは2枚まで",
+        "actual": "3枚目もめくれる",
+        "severity": "中"
+      }
     },
     {
       "id": "MM-HW-003",
@@ -35,7 +51,15 @@
       "expected": "クリアで「かぼちゃメダル」×3",
       "severity": "高",
       "spec_ref": "イベント仕様メモ「クリアで『かぼちゃメダル』×3」",
-      "difficulty": "ふつう"
+      "difficulty": "ふつう",
+      "report": {
+        "where": "クリア画面",
+        "steps": "全ペアをそろえてクリアする",
+        "target": "クリア報酬の数",
+        "expected": "クリアで「かぼちゃメダル」×3",
+        "actual": "メダルが×1しかもらえない",
+        "severity": "高"
+      }
     }
   ]
 }

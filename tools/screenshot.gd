@@ -15,6 +15,11 @@ func _run() -> void:
 				c.flip_up()
 		"memo":
 			main.memo.show_spec(main.spec)
+		"report":
+			main.report_form.open(main.report_options, "神経衰弱 ハロウィンイベント v1.3")
+			var g = main.report_form.groups
+			for key in ["where", "target"]:
+				g[key].get_buttons()[0].button_pressed = true
 		"clear":
 			main.game._on_clear()
 	await create_timer(0.3).timeout

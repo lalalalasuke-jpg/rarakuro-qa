@@ -6,6 +6,8 @@ extends Control
 # どのバグを起こすかは start() に渡す ID の一覧で決まる（データは res://data/bugs.json）。
 
 signal cleared(moves: int, medals: int)
+## バグが実際に画面に出た（プレイヤーが目にした）時に出す。報告書で「見たバグか」の確認に使う
+signal bug_seen(id: String)
 
 const CARD := preload("res://scenes/titles/memory_match/card.tscn")
 ## ペアの数（カード枚数はこの2倍）
@@ -35,6 +37,10 @@ var bugs: Array = []
 @onready var clear_panel: Control = $ClearPanel
 @onready var clear_moves_label: Label = $ClearPanel/ClearMoves
 @onready var clear_reward_label: Label = $ClearPanel/ClearReward
+
+
+func _ready() -> void:
+	$ClearPanel/Replay.pressed.connect(func(): start(bugs))
 
 
 func has_bug(id: String) -> bool:
@@ -77,6 +83,10 @@ func _on_card_pressed(card: MemoryCard) -> void:
 		return
 	card.flip_up()
 	flipped.append(card)
+	if not card.halloween:
+		bug_seen.emit("MM-HW-001")
+	if flipped.size() == 3:
+		bug_seen.emit("MM-HW-002")
 	if flipped.size() != 2:
 		# 1枚目、またはバグ002で3枚目以降をめくった時はここで終わり
 		return
@@ -119,6 +129,8 @@ func _on_clear() -> void:
 	clear_moves_label.text = "MOVES %d" % moves
 	clear_reward_label.text = "報酬：かぼちゃメダル ×%d" % medals
 	clear_panel.visible = true
+	if medals != CLEAR_MEDALS:
+		bug_seen.emit("MM-HW-003")
 	cleared.emit(moves, medals)
 
 

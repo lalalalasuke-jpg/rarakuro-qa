@@ -2,6 +2,7 @@
   "_comment": "1日目の担当。bugs はこの日に有効にするバグの ID（data/bugs.json）",
   "day": 1,
   "spec": "res://data/spec_mm_halloween.json",
+  "report": "res://data/report_mm_halloween.json",
   "chat_from": "リーダー",
   "chat": "おはよう！今日の担当は「神経衰弱 ハロウィンイベント v1.3」だよ。仕様メモを読んでからテストしてね。",
   "bugs": ["MM-HW-001", "MM-HW-002", "MM-HW-003"]
