@@ -53,4 +53,4 @@ git -C .claude-memory push
 ## このゲーム（ららくろそふとQA）
 
 - 企画書は `docs/design.md`（決定事項と改訂履歴もここ）。くろすけの企画メモは `bug-hunt-game-plan.md`（claude-memory）
-- GitHubトークンに `workflow` 権限が無いので、`.github/workflows/` を変える時は git push ではなく GitHub MCP（create_or_update_file）で更新する（2026-10-26、リポジトリ作成時に push が拒否された）
+- （2026-10-26）リポジトリ作成時は gh トークンに `workflow` 権限が無く workflow の push が拒否された → 同日 `gh auth refresh -s workflow` で解消済み。今は普通に git push でよい
